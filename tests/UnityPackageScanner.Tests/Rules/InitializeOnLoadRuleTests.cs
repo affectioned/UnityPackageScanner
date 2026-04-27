@@ -174,6 +174,36 @@ public sealed class InitializeOnLoadRuleTests
         findings.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task Does_not_fire_on_cs_entry_with_no_asset_bytes()
+    {
+        // Entries with null AssetBytes (e.g. asset file absent from the package) are skipped silently.
+        var package = new UnityPackageBuilder()
+            .WithEmptyAsset("Assets/Editor/AutoRun.cs")
+            .Build();
+
+        var entries = await _extractor.ExtractFromStreamAsync(package);
+        var findings = await CollectFindings(entries);
+
+        findings.Should().BeEmpty("no asset bytes to scan");
+    }
+
+    [Fact]
+    public async Task Does_not_fire_on_dll_entry_in_milestone_1()
+    {
+        // DLL inspection via AsmResolver is a Milestone 2 implementation.
+        // This test documents the expected stub behaviour and exercises the branch.
+        var mzBytes = new byte[] { 0x4D, 0x5A, 0x90, 0x00 };
+        var package = new UnityPackageBuilder()
+            .WithAsset("Assets/Plugins/payload.dll", mzBytes)
+            .Build();
+
+        var entries = await _extractor.ExtractFromStreamAsync(package);
+        var findings = await CollectFindings(entries);
+
+        findings.Should().BeEmpty("DLL inspection is not implemented until Milestone 2");
+    }
+
     // --- Helpers ---
 
     private async Task<IReadOnlyList<PackageEntry>> BuildAndExtract(

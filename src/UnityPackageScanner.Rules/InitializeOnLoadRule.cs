@@ -111,12 +111,12 @@ public sealed partial class InitializeOnLoadRule(ILogger<InitializeOnLoadRule> l
         await Task.CompletedTask; // satisfy async enumerable requirement
     }
 
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(
+        Justification = "DLL inspection via AsmResolver is implemented in Milestone 2.")]
     private async IAsyncEnumerable<Finding> AnalyzeManagedDllAsync(
         PackageEntry entry,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        // DLL inspection via AsmResolver is implemented in later milestones.
-        // For now, yield nothing — the rule is wired up and ready to be extended.
         await Task.CompletedTask;
         yield break;
     }

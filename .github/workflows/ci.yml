@@ -43,6 +43,7 @@ jobs:
             --configuration Release \
             --no-build \
             --collect:"XPlat Code Coverage" \
+            --settings tests/UnityPackageScanner.Tests/coverlet.runsettings \
             --results-directory ./coverage
 
       - name: Install ReportGenerator

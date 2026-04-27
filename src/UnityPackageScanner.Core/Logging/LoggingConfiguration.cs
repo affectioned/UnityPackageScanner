@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Serilog;
 using Serilog.Events;
 
 namespace UnityPackageScanner.Core.Logging;
 
 /// <summary>Shared Serilog setup used by both CLI and UI frontends.</summary>
+[ExcludeFromCodeCoverage(Justification = "Pure Serilog wiring — no domain logic to unit test.")]
 public static class LoggingConfiguration
 {
     public static string LogDirectory =>

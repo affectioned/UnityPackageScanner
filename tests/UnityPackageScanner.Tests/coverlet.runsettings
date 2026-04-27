@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <!-- Exclude auto-generated code that we cannot influence -->
+          <ExcludeByAttribute>ExcludeFromCodeCoverage,GeneratedCode,DebuggerNonUserCode</ExcludeByAttribute>
+          <!-- Exclude the Roslyn-generated regex state machines -->
+          <Exclude>[*]System.Text.RegularExpressions.Generated.*</Exclude>
+          <!-- TestFixtures is a test-helper assembly, not domain logic -->
+          <Exclude>[UnityPackageScanner.TestFixtures]*</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
