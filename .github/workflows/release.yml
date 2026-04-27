@@ -81,7 +81,6 @@ jobs:
         run: dotnet restore
 
       - name: Publish GUI
-        if: matrix.rid != 'linux-x64'
         run: |
           dotnet publish src/UnityPackageScanner.UI \
             --configuration Release \
@@ -110,8 +109,8 @@ jobs:
           Compress-Archive -Path ./publish/gui/${{ matrix.rid }}/* -DestinationPath "UnityPackageScanner-${{ steps.version.outputs.version }}-${{ matrix.rid }}.zip"
         shell: pwsh
 
-      - name: Package GUI (tar.gz — macOS)
-        if: matrix.rid == 'osx-x64' || matrix.rid == 'osx-arm64'
+      - name: Package GUI (tar.gz — Linux/macOS)
+        if: matrix.rid != 'win-x64'
         run: |
           cp README.md LICENSE ./publish/gui/${{ matrix.rid }}/
           tar -czf "UnityPackageScanner-${{ steps.version.outputs.version }}-${{ matrix.rid }}.tar.gz" \

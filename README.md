@@ -11,7 +11,7 @@ Download a release archive from the [Releases](../../releases) page. Two archive
 | Platform | GUI archive | CLI archive |
 |---|---|---|
 | Windows x64 | `UnityPackageScanner-<version>-win-x64.zip` | `unity-package-scanner-cli-<version>-win-x64.zip` |
-| Linux x64 | — | `unity-package-scanner-cli-<version>-linux-x64.tar.gz` |
+| Linux x64 | `UnityPackageScanner-<version>-linux-x64.tar.gz` | `unity-package-scanner-cli-<version>-linux-x64.tar.gz` |
 | macOS x64 | `UnityPackageScanner-<version>-osx-x64.tar.gz` | `unity-package-scanner-cli-<version>-osx-x64.tar.gz` |
 | macOS ARM64 | `UnityPackageScanner-<version>-osx-arm64.tar.gz` | `unity-package-scanner-cli-<version>-osx-arm64.tar.gz` |
 
