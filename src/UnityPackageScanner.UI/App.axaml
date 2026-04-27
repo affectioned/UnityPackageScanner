@@ -1,0 +1,33 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UnityPackageScanner.UI.App"
+             RequestedThemeVariant="Dark">
+  <Application.Styles>
+    <SimpleTheme />
+  </Application.Styles>
+  <Application.Resources>
+    <!-- Dark palette — reference these everywhere, never hardcode hex values in views -->
+    <Color x:Key="BgColor">#1A1A1A</Color>
+    <Color x:Key="SurfaceColor">#252526</Color>
+    <Color x:Key="BorderColor">#3C3C3C</Color>
+    <Color x:Key="TextColor">#DCDCDC</Color>
+    <Color x:Key="MutedTextColor">#888888</Color>
+
+    <!-- Severity colors -->
+    <Color x:Key="SeverityClean">#4EC94E</Color>
+    <Color x:Key="SeveritySuspicious">#D4B84A</Color>
+    <Color x:Key="SeverityHighRisk">#D47B3F</Color>
+    <Color x:Key="SeverityCritical">#D44040</Color>
+
+    <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="{StaticResource MutedTextColor}" />
+
+    <SolidColorBrush x:Key="SeverityCleanBrush" Color="{StaticResource SeverityClean}" />
+    <SolidColorBrush x:Key="SeveritySuspiciousBrush" Color="{StaticResource SeveritySuspicious}" />
+    <SolidColorBrush x:Key="SeverityHighRiskBrush" Color="{StaticResource SeverityHighRisk}" />
+    <SolidColorBrush x:Key="SeverityCriticalBrush" Color="{StaticResource SeverityCritical}" />
+  </Application.Resources>
+</Application>

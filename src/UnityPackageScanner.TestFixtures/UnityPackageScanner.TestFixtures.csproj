@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\UnityPackageScanner.Core\UnityPackageScanner.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AsmResolver.DotNet" Version="5.5.1" />
+    <PackageReference Include="AsmResolver.PE" Version="5.5.1" />
+  </ItemGroup>
+</Project>

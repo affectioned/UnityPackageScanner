@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UnityPackageScanner.UI.Views.AboutView">
+  <StackPanel Margin="16" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <TextBlock Text="Unity Package Scanner" FontSize="20" FontWeight="Bold"
+               Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center" />
+    <TextBlock Text="v0.1.0" Foreground="{StaticResource MutedTextBrush}"
+               HorizontalAlignment="Center" />
+    <TextBlock TextWrapping="Wrap" MaxWidth="480" HorizontalAlignment="Center"
+               Foreground="{StaticResource TextBrush}" FontSize="12"
+               Text="Static analysis tool for .unitypackage files. Detects potentially malicious content before you import it into a Unity project." />
+    <TextBlock Text="MIT License" Foreground="{StaticResource MutedTextBrush}"
+               HorizontalAlignment="Center" FontSize="11" />
+  </StackPanel>
+</UserControl>

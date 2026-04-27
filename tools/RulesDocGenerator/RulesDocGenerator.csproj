@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\UnityPackageScanner.Core\UnityPackageScanner.Core.csproj" />
+    <ProjectReference Include="..\..\src\UnityPackageScanner.Rules\UnityPackageScanner.Rules.csproj" />
+  </ItemGroup>
+</Project>

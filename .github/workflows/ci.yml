@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["v*.*.*"]
+  pull_request:
+
+jobs:
+  test:
+    name: Build & Test — ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test with coverage
+        run: |
+          dotnet test tests/UnityPackageScanner.Tests/UnityPackageScanner.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage
+
+      - name: Install ReportGenerator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        run: |
+          reportgenerator \
+            -reports:./coverage/**/coverage.cobertura.xml \
+            -targetdir:./coverage/report \
+            -reporttypes:TextSummary
+
+      - name: Check coverage threshold (≥85%)
+        shell: bash
+        run: |
+          SUMMARY=$(cat ./coverage/report/Summary.txt 2>/dev/null || echo "")
+          echo "$SUMMARY"
+          # Extract line coverage percentage
+          LINE_COV=$(echo "$SUMMARY" | grep -oP 'Line coverage: \K[\d.]+' || echo "0")
+          echo "Line coverage: $LINE_COV%"
+          if (( $(echo "$LINE_COV < 85" | bc -l) )); then
+            echo "::error::Coverage $LINE_COV% is below 85% threshold"
+            exit 1
+          fi
+
+      - name: Verify docs/rules.md is current
+        run: |
+          dotnet run --project tools/RulesDocGenerator --configuration Release -- /tmp/rules_check.md
+          diff docs/rules.md /tmp/rules_check.md || (echo "::error::docs/rules.md is out of date. Run: dotnet run --project tools/RulesDocGenerator" && exit 1)
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.os }}
+          path: ./coverage/report/

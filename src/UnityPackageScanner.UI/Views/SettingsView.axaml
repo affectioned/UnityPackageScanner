@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:UnityPackageScanner.UI.ViewModels"
+             x:Class="UnityPackageScanner.UI.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="16">
+      <TextBlock Text="Settings" FontSize="16" FontWeight="Bold"
+                 Foreground="{StaticResource TextBrush}" />
+
+      <TextBlock Text="Rules" FontSize="13" Foreground="{StaticResource MutedTextBrush}" />
+
+      <!-- Rule toggles are added here in later milestones -->
+      <TextBlock Text="(No configurable settings yet — more options come with each milestone.)"
+                 Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
