@@ -69,8 +69,8 @@ internal static class TextFormatter
     {
         "never" => 0,
         "clean" => verdict == Verdict.Clean ? 0 : 1,
-        "suspicious" => verdict <= Verdict.Suspicious ? 0 : 1,
-        "high" => verdict <= Verdict.HighRisk ? 0 : 1,
+        "suspicious" => verdict >= Verdict.Suspicious ? 1 : 0,
+        "high" => verdict >= Verdict.HighRisk ? 1 : 0,
         "critical" => verdict == Verdict.Critical ? 1 : 0,
         _ => 0,
     };

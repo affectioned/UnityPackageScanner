@@ -189,10 +189,9 @@ public sealed class InitializeOnLoadRuleTests
     }
 
     [Fact]
-    public async Task Does_not_fire_on_dll_entry_in_milestone_1()
+    public async Task Does_not_fire_on_unreadable_pe()
     {
-        // DLL inspection via AsmResolver is a Milestone 2 implementation.
-        // This test documents the expected stub behaviour and exercises the branch.
+        // A stub MZ blob that AsmResolver cannot parse — treated as non-managed, silently skipped.
         var mzBytes = new byte[] { 0x4D, 0x5A, 0x90, 0x00 };
         var package = new UnityPackageBuilder()
             .WithAsset("Assets/Plugins/payload.dll", mzBytes)
@@ -201,10 +200,57 @@ public sealed class InitializeOnLoadRuleTests
         var entries = await _extractor.ExtractFromStreamAsync(package);
         var findings = await CollectFindings(entries);
 
-        findings.Should().BeEmpty("DLL inspection is not implemented until Milestone 2");
+        findings.Should().BeEmpty("unreadable PE is not a managed DLL — skipped silently");
+    }
+
+    // --- DLL inspection tests (Milestone 3) ---
+
+    [Fact]
+    public async Task Fires_on_dll_with_InitializeOnLoad_attribute()
+    {
+        var entries = await BuildAndExtractDll(ManagedDllBuilder.WithInitializeOnLoad());
+        var findings = await CollectFindings(entries);
+
+        findings.Should().ContainSingle()
+            .Which.RuleId.Should().Be(KnownRuleIds.AutoExecuteEditor);
+    }
+
+    [Fact]
+    public async Task Fires_on_dll_with_AssetPostprocessor_base()
+    {
+        var entries = await BuildAndExtractDll(ManagedDllBuilder.WithAssetPostprocessor());
+        var findings = await CollectFindings(entries);
+
+        findings.Should().ContainSingle()
+            .Which.RuleId.Should().Be(KnownRuleIds.AutoExecuteEditor);
+    }
+
+    [Fact]
+    public async Task DLL_finding_has_Critical_severity()
+    {
+        var entries = await BuildAndExtractDll(ManagedDllBuilder.WithInitializeOnLoad());
+        var findings = await CollectFindings(entries);
+
+        findings.Single().Severity.Should().Be(Severity.Critical);
+    }
+
+    [Fact]
+    public async Task Does_not_fire_on_clean_managed_dll()
+    {
+        var entries = await BuildAndExtractDll(NativeBinaryBuilder.CreateManagedDll());
+        var findings = await CollectFindings(entries);
+
+        findings.Should().BeEmpty("no auto-execute attributes or base types in a blank module");
     }
 
     // --- Helpers ---
+
+    private async Task<IReadOnlyList<PackageEntry>> BuildAndExtractDll(byte[] dllBytes,
+        string pathname = "Assets/Plugins/test.dll")
+    {
+        var package = new UnityPackageBuilder().WithAsset(pathname, dllBytes).Build();
+        return await _extractor.ExtractFromStreamAsync(package);
+    }
 
     private async Task<IReadOnlyList<PackageEntry>> BuildAndExtract(
         string csSource,

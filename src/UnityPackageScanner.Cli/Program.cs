@@ -80,6 +80,12 @@ root.SetHandler(async (InvocationContext ctx) =>
     var rules = new IDetectionRule[]
     {
         new InitializeOnLoadRule(loggerFactory.CreateLogger<InitializeOnLoadRule>()),
+        new NativePluginRule(loggerFactory.CreateLogger<NativePluginRule>()),
+        new PathAnomalyRule(loggerFactory.CreateLogger<PathAnomalyRule>()),
+        new NetworkAccessRule(loggerFactory.CreateLogger<NetworkAccessRule>()),
+        new ProcessSpawnRule(loggerFactory.CreateLogger<ProcessSpawnRule>()),
+        new ReflectionLoadRule(loggerFactory.CreateLogger<ReflectionLoadRule>()),
+        new SuspiciousPInvokeRule(loggerFactory.CreateLogger<SuspiciousPInvokeRule>()),
     };
 
     if (listRules)
@@ -170,11 +176,8 @@ static void WriteOutput(ScanResult result, string format, FileInfo? outputFile, 
 
     var text = format switch
     {
-        "json" => System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = true,
-            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
-        }),
+        "json" => UnityPackageScanner.Cli.JsonFormatter.Format(result),
+        "sarif" => UnityPackageScanner.Cli.SarifFormatter.Format(result),
         _ => $"Format '{format}' not yet implemented.",
     };
 

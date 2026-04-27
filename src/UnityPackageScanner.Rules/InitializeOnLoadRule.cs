@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using AsmResolver.DotNet;
 using Microsoft.Extensions.Logging;
 using UnityPackageScanner.Core.Analysis;
 using UnityPackageScanner.Core.Models;
@@ -111,13 +112,61 @@ public sealed partial class InitializeOnLoadRule(ILogger<InitializeOnLoadRule> l
         await Task.CompletedTask; // satisfy async enumerable requirement
     }
 
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(
-        Justification = "DLL inspection via AsmResolver is implemented in Milestone 2.")]
     private async IAsyncEnumerable<Finding> AnalyzeManagedDllAsync(
         PackageEntry entry,
         [EnumeratorCancellation] CancellationToken ct)
     {
+        if (entry.AssetBytes is null) yield break;
+
+        ModuleDefinition module;
+        try { module = ModuleDefinition.FromBytes(entry.AssetBytes); }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "{RuleId}: {Path} is not a managed DLL — skipping", RuleId, entry.Pathname);
+            yield break;
+        }
+
+        var evidence = new List<string>();
+
+        foreach (var type in module.GetAllTypes())
+        {
+            // Custom attributes: [InitializeOnLoad] or [InitializeOnLoadMethod] on the type
+            foreach (var attr in type.CustomAttributes)
+            {
+                var attrName = attr.Constructor?.DeclaringType?.Name?.ToString() ?? "";
+                if (attrName is "InitializeOnLoadAttribute" or "InitializeOnLoadMethodAttribute")
+                    evidence.Add($"[{attrName.Replace("Attribute", "")}] on {type.Name}");
+            }
+
+            // Base class: AssetPostprocessor or AssetModificationProcessor
+            var baseTypeName = type.BaseType?.Name?.ToString() ?? "";
+            if (baseTypeName is "AssetPostprocessor" or "AssetModificationProcessor")
+                evidence.Add($"Inherits {baseTypeName} ({type.Name})");
+
+            // Methods: [InitializeOnLoadMethod] on individual methods
+            foreach (var method in type.Methods)
+                foreach (var attr in method.CustomAttributes)
+                {
+                    var attrName = attr.Constructor?.DeclaringType?.Name ?? "";
+                    if (attrName == "InitializeOnLoadMethodAttribute")
+                        evidence.Add($"[InitializeOnLoadMethod] on {type.Name}.{method.Name}");
+                }
+        }
+
+        if (evidence.Count > 0)
+        {
+            logger.LogDebug("{RuleId}: DLL {Path} has {Count} auto-execute signal(s)", RuleId, entry.Pathname, evidence.Count);
+            yield return new Finding
+            {
+                RuleId = RuleId,
+                Severity = DefaultSeverity,
+                Title = Title,
+                Description = "This compiled assembly will execute code automatically when imported into Unity.",
+                Entry = entry,
+                Evidence = string.Join("; ", evidence),
+            };
+        }
+
         await Task.CompletedTask;
-        yield break;
     }
 }

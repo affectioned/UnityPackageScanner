@@ -16,3 +16,69 @@ Detects C# source files and compiled assemblies that use Unity's [InitializeOnLo
 - Legitimate editor tooling (e.g. asset store packages with setup wizards) commonly uses [InitializeOnLoad]. Look at what the static constructor actually does before concluding it is malicious.
 - Test-only packages that configure test runners on import.
 
+### Native plugin detected (`UPS003`)
+
+**Severity:** Critical
+
+Detects native (unmanaged) binaries: PE files without a CLR header, ELF binaries, and Mach-O binaries. Unity loads these from the Plugins/ folder at startup. Because native code runs outside the CLR, this tool cannot statically analyze what it does — treat any native plugin from an untrusted source with the same caution as an obfuscated managed DLL. Detection is based on file magic bytes, so renaming a .dll to .asset does not evade this rule.
+
+**Common false positives:**
+
+- Legitimate packages that wrap platform-specific native functionality (physics engines, audio SDKs, rendering middleware) always contain native plugins. Check the publisher and whether the plugin is signed before concluding it is malicious.
+- Pre-compiled Burst-compiled assemblies (.bc, Burst-native .dll wrappers) may appear as native.
+
+### Suspicious file path (`UPS004`)
+
+**Severity:** Critical
+
+Detects file paths inside the package that could escape the Unity project directory or overwrite sensitive project configuration. Checks for directory traversal sequences (../), absolute Unix and Windows paths, null bytes, and entries targeting reserved Unity directories (ProjectSettings/, Packages/).
+
+**Common false positives:**
+
+- No legitimate Unity package should contain path traversal sequences or absolute paths. These patterns have essentially no false-positive rate.
+- Packages that ship ProjectSettings templates as documentation may include a 'ProjectSettings/' folder. This is extremely unusual and still warrants scrutiny.
+
+## HighRisk
+
+### Suspicious network access (`UPS005`)
+
+**Severity:** HighRisk
+
+Detects managed assemblies that reference networking types such as System.Net.Http.HttpClient, System.Net.WebClient, or System.Net.Sockets.Socket in their method bodies. Unity plugins that make outbound network calls can exfiltrate data or download additional payloads after import. Detection is based on method-body metadata — only direct type references are flagged, not calls via reflection.
+
+**Common false positives:**
+
+- Analytics SDKs, crash reporters, and multiplayer packages legitimately use HttpClient. Check whether the publisher is known and whether the network call targets a documented endpoint.
+- Editor tools that fetch Unity version or package update info may also use HttpClient.
+
+### Suspicious process spawn (`UPS006`)
+
+**Severity:** HighRisk
+
+Detects managed assemblies that reference System.Diagnostics.Process or ProcessStartInfo in their method bodies. A Unity plugin that spawns child processes can execute arbitrary system commands, install persistence mechanisms, or launch privilege-escalation exploits.
+
+**Common false positives:**
+
+- Build-automation packages that invoke external compilers or code-generation tools may legitimately reference Process. Verify that the process name and arguments are restricted to known safe values.
+
+### Dynamic assembly loading (`UPS007`)
+
+**Severity:** HighRisk
+
+Detects managed assemblies that call System.Reflection.Assembly.Load, LoadFrom, LoadFile, or LoadWithPartialName in their method bodies. These methods load additional .NET assemblies at runtime — a technique used by malware to deliver a second-stage payload that is not visible to static analysis of the original package.
+
+**Common false positives:**
+
+- Plugin frameworks and extensibility systems that load user-provided assemblies by path may legitimately call Assembly.LoadFrom. The risk depends entirely on where the path comes from — a hardcoded relative path inside the package is more concerning than a user-configured path.
+
+### Suspicious P/Invoke (`UPS008`)
+
+**Severity:** HighRisk
+
+Detects managed assemblies that declare Platform Invoke (P/Invoke) methods via [DllImport] or load native libraries at runtime via NativeLibrary.Load. P/Invoke gives managed code unrestricted access to native system APIs, bypassing the CLR's security model. Combined with obfuscation, this is a common pattern for hiding malicious functionality.
+
+**Common false positives:**
+
+- Native interop wrappers (physics engines, audio SDKs, platform-specific APIs) legitimately use P/Invoke. The concern is the combination of P/Invoke with obfuscation or unusual target DLL names (random, temp-path, or OS internals like ntdll.dll/kernel32.dll).
+- Unity's own Editor assemblies use P/Invoke extensively — this rule fires on user-supplied packages only.
+

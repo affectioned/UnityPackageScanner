@@ -23,6 +23,12 @@ internal static class ServiceLocator
         var rules = new IDetectionRule[]
         {
             new InitializeOnLoadRule(loggerFactory.CreateLogger<InitializeOnLoadRule>()),
+            new NativePluginRule(loggerFactory.CreateLogger<NativePluginRule>()),
+            new PathAnomalyRule(loggerFactory.CreateLogger<PathAnomalyRule>()),
+            new NetworkAccessRule(loggerFactory.CreateLogger<NetworkAccessRule>()),
+            new ProcessSpawnRule(loggerFactory.CreateLogger<ProcessSpawnRule>()),
+            new ReflectionLoadRule(loggerFactory.CreateLogger<ReflectionLoadRule>()),
+            new SuspiciousPInvokeRule(loggerFactory.CreateLogger<SuspiciousPInvokeRule>()),
         };
 
         var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>());
