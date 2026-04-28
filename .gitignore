@@ -210,3 +210,6 @@ FakesAssemblies/
 
 # JetBrains Rider
 *.sln.iml
+# Vim swap files
+*.swp
+*.swo
