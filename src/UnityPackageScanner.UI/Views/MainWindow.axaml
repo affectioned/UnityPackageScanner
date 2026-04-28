@@ -27,7 +27,7 @@
                      Foreground="{StaticResource TextBrush}" FontSize="14" />
           <TextBlock Text="|" Foreground="{StaticResource MutedTextBrush}" />
           <TextBlock Text="{Binding PackagePath}" Foreground="{StaticResource MutedTextBrush}"
-                     FontSize="12" TextTrimming="LeadingEllipsis" MaxWidth="400" />
+                     FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="400" />
           <TextBlock Text="{Binding PackageSize}" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
         </StackPanel>
 
@@ -120,7 +120,7 @@
                              Width="16" FontFamily="Consolas,Monospace" />
                   <TextBlock Grid.Column="1" Text="{Binding Pathname}"
                              Foreground="{StaticResource TextBrush}" FontSize="11"
-                             TextTrimming="LeadingEllipsis" />
+                             TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Text="{Binding SizeDisplay}"
                              Foreground="{StaticResource MutedTextBrush}" FontSize="10"
                              Margin="8,0,0,0" />
