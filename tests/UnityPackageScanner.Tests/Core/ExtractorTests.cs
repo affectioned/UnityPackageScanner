@@ -230,9 +230,9 @@ public sealed class ExtractorTests
         var truncated = new byte[package.Length / 2];
         Array.Copy(package.ToArray(), truncated, truncated.Length);
 
+        // Should complete without crashing — returns partial (possibly empty) results.
+        // ExtractFromStreamAsync logs a warning and returns whatever it could parse.
         var act = () => _extractor.ExtractFromStreamAsync(new System.IO.MemoryStream(truncated));
-
-        // Should throw some IO/compression exception, not crash the process
-        await act.Should().ThrowAsync<Exception>();
+        await act.Should().NotThrowAsync();
     }
 }

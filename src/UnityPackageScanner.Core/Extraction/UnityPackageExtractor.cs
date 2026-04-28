@@ -1,5 +1,6 @@
-using System.Formats.Tar;
+using System.Buffers;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -56,24 +57,20 @@ public sealed class UnityPackageExtractor(
         bool capWarningLogged = false;
 
         await using var gzip = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
-        using var tar = new TarReader(gzip, leaveOpen: true);
 
-        TarEntry? entry;
         try
         {
-        while ((entry = await tar.GetNextEntryAsync(copyData: false, ct)) != null)
+        await foreach (var (name, size, data) in ReadTarEntriesAsync(gzip, InMemoryThresholdBytes, logger, ct))
         {
-            ct.ThrowIfCancellationRequested();
+            // name looks like: /abc123/asset, /abc123/pathname, abc123/asset.meta, etc.
+            var entryName = name.Replace('\\', '/').TrimStart('/');
+            if (string.IsNullOrEmpty(entryName)) continue;
 
-            // entry.Name looks like: /abc123/asset, /abc123/pathname, abc123/asset.meta, etc.
-            var name = entry.Name.Replace('\\', '/').TrimStart('/');
-            if (string.IsNullOrEmpty(name)) continue;
-
-            var slash = name.IndexOf('/');
+            var slash = entryName.IndexOf('/');
             if (slash < 0) continue;
 
-            var guid = name[..slash];
-            var file = name[(slash + 1)..];
+            var guid = entryName[..slash];
+            var file = entryName[(slash + 1)..];
 
             if (!buckets.TryGetValue(guid, out var bucket))
             {
@@ -81,24 +78,22 @@ public sealed class UnityPackageExtractor(
                 buckets[guid] = bucket;
             }
 
-            if (entry.DataStream is null) continue;
-
             switch (file)
             {
                 case "pathname":
-                    bucket.Pathname = await ReadTextAsync(entry.DataStream, ct);
+                    bucket.Pathname = data is not null ? Encoding.UTF8.GetString(data).Trim() : null;
                     break;
                 case "asset.meta":
-                    bucket.MetaText = await ReadTextAsync(entry.DataStream, ct);
+                    bucket.MetaText = data is not null ? Encoding.UTF8.GetString(data) : null;
                     break;
                 case "asset":
-                    if (entry.Length is > 0 and <= InMemoryThresholdBytes)
+                    bucket.AssetSize = size;
+                    if (data is not null)
                     {
-                        if (totalBytesLoaded + entry.Length <= totalMemoryCap)
+                        if (totalBytesLoaded + size <= totalMemoryCap)
                         {
-                            bucket.AssetBytes = await ReadBytesAsync(entry.DataStream, (int)entry.Length, ct);
-                            bucket.AssetSize = entry.Length;
-                            totalBytesLoaded += entry.Length;
+                            bucket.AssetBytes = data;
+                            totalBytesLoaded += size;
                         }
                         else
                         {
@@ -110,38 +105,27 @@ public sealed class UnityPackageExtractor(
                                     totalMemoryCap / 1024 / 1024);
                                 capWarningLogged = true;
                             }
-                            bucket.AssetSize = entry.Length;
                             bucket.AssetTooLarge = true;
-                            await entry.DataStream.CopyToAsync(Stream.Null, ct);
                         }
                     }
-                    else if (entry.Length > InMemoryThresholdBytes)
+                    else if (size > 0)
                     {
-                        bucket.AssetSize = entry.Length;
                         bucket.AssetTooLarge = true;
-                        // Drain the stream so TarReader can advance.
-                        await entry.DataStream.CopyToAsync(Stream.Null, ct);
                     }
                     break;
                 default:
                     // preview.png and anything else — skip
-                    await entry.DataStream.CopyToAsync(Stream.Null, ct);
                     break;
             }
         }
         }
         catch (InvalidDataException ex)
         {
-            // Some packages produced by older Unity versions or third-party tools use a
-            // non-standard tar header (e.g. unexpected version field).  Return whatever
-            // entries were successfully parsed rather than aborting the scan entirely.
-            logger.LogWarning(ex,
-                "Tar archive contains a malformed header — returning {Count} partial entries",
-                buckets.Count);
+            logger.LogWarning(ex, "Corrupt or truncated archive data — returning {Count} partial entries", buckets.Count);
         }
-        catch (EndOfStreamException) when (buckets.Count == 0)
+        catch (IOException ex)
         {
-            // An empty or zero-entry tar archive produces no entries; not an error.
+            logger.LogWarning(ex, "I/O error reading archive — returning {Count} partial entries", buckets.Count);
         }
 
         var results = new List<PackageEntry>(buckets.Count);
@@ -153,7 +137,7 @@ public sealed class UnityPackageExtractor(
                 continue;
             }
 
-            var pathname = bucket.Pathname.Trim().Replace('\\', '/');
+            var pathname = bucket.Pathname.Replace('\\', '/');
             var detectedType = DetectType(pathname, bucket.AssetBytes);
 
             results.Add(new PackageEntry
@@ -171,6 +155,208 @@ public sealed class UnityPackageExtractor(
         logger.LogInformation("Extracted {Count} entries", results.Count);
         return results;
     }
+
+    // ---------------------------------------------------------------------------
+    // Lenient manual tar reader
+    //
+    // System.Formats.Tar.TarReader is strict about header fields (magic, version)
+    // and throws InvalidDataException on the first bad block, losing all subsequent
+    // entries. Unity packages produced by older Unity versions or third-party tools
+    // sometimes contain non-standard headers. This reader skips unreadable blocks
+    // and continues, matching the behaviour of other Unity package tools.
+    // ---------------------------------------------------------------------------
+
+    private static async IAsyncEnumerable<(string Name, long Size, byte[]? Data)> ReadTarEntriesAsync(
+        Stream stream,
+        long perFileLimit,
+        ILogger logger,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        const int BlockSize = 512;
+        var header = new byte[BlockSize];
+        string? pendingLongName = null;
+        int zeroBlocks = 0;
+
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            int read = await FillBufferAsync(stream, header, ct);
+            if (read == 0) yield break;
+            if (read < BlockSize)
+            {
+                logger.LogWarning("Unexpected end of tar archive after {Read} bytes", read);
+                yield break;
+            }
+
+            // Two consecutive all-zero blocks = end-of-archive marker
+            if (IsAllZero(header))
+            {
+                if (++zeroBlocks >= 2) yield break;
+                continue;
+            }
+            zeroBlocks = 0;
+
+            string name = pendingLongName ?? ParseTarName(header);
+            pendingLongName = null;
+
+            long size = ParseTarSize(header);
+            if (size < 0 || size > 8L * 1024 * 1024 * 1024)
+            {
+                // Implausible size — header is probably garbage; skip and try next block
+                logger.LogDebug("Skipping tar block with implausible size {Size} (name={Name})", size, name);
+                continue;
+            }
+
+            char typeFlag = header[156] == 0 ? '0' : (char)header[156];
+            long paddedSize = (size + BlockSize - 1) / BlockSize * BlockSize;
+
+            switch (typeFlag)
+            {
+                case 'L': // GNU long-name extension: the data IS the filename of the next entry
+                {
+                    if (size is > 0 and <= 4096)
+                    {
+                        var nameBuf = new byte[paddedSize];
+                        await FillBufferAsync(stream, nameBuf, ct);
+                        pendingLongName = NullTerminatedString(nameBuf, (int)size);
+                    }
+                    else
+                    {
+                        await DrainAsync(stream, paddedSize, ct);
+                    }
+                    continue;
+                }
+                case 'K': // GNU long-link extension — not relevant for our use; skip
+                {
+                    await DrainAsync(stream, paddedSize, ct);
+                    continue;
+                }
+                case '0':  // POSIX regular file
+                case '\0': // pre-POSIX regular file
+                {
+                    byte[]? data = null;
+                    if (size > 0)
+                    {
+                        if (size <= perFileLimit)
+                        {
+                            data = new byte[size];
+                            int dataRead = await FillBufferAsync(stream, data, ct);
+                            if (dataRead < size)
+                            {
+                                logger.LogWarning("Truncated data for tar entry {Name} (expected {Size})", name, size);
+                                yield break;
+                            }
+                            long padding = paddedSize - size;
+                            if (padding > 0) await DrainAsync(stream, padding, ct);
+                        }
+                        else
+                        {
+                            await DrainAsync(stream, paddedSize, ct);
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(name))
+                        yield return (name, size, data);
+                    break;
+                }
+                default: // directory, symlink, etc.
+                {
+                    if (paddedSize > 0) await DrainAsync(stream, paddedSize, ct);
+                    break;
+                }
+            }
+        }
+    }
+
+    private static bool IsAllZero(byte[] buf)
+    {
+        foreach (byte b in buf)
+            if (b != 0) return false;
+        return true;
+    }
+
+    private static string ParseTarName(byte[] header)
+    {
+        // Name: bytes 0-99 (POSIX ustar also has a 155-byte prefix at bytes 345-499)
+        bool isUstar = header[257] == 'u' && header[258] == 's' && header[259] == 't' &&
+                       header[260] == 'a' && header[261] == 'r';
+
+        string name = NullTerminatedString(header, 100, offset: 0);
+
+        if (isUstar)
+        {
+            string prefix = NullTerminatedString(header, 155, offset: 345);
+            if (!string.IsNullOrEmpty(prefix))
+                name = prefix + "/" + name;
+        }
+
+        return name;
+    }
+
+    private static long ParseTarSize(byte[] header)
+    {
+        // GNU base-256: high bit of byte 124 is set
+        if ((header[124] & 0x80) != 0)
+        {
+            long size = header[124] & 0x7FL;
+            for (int i = 125; i < 136; i++)
+                size = size * 256 + header[i];
+            return size;
+        }
+
+        // Standard octal (lenient — ignore unexpected bytes rather than throwing)
+        long result = 0;
+        for (int i = 124; i < 136; i++)
+        {
+            byte b = header[i];
+            if (b == 0 || b == ' ') break;
+            if (b >= '0' && b <= '7') result = result * 8 + (b - '0');
+        }
+        return result;
+    }
+
+    private static string NullTerminatedString(byte[] buf, int maxLen, int offset = 0)
+    {
+        int end = offset;
+        int limit = Math.Min(offset + maxLen, buf.Length);
+        while (end < limit && buf[end] != 0) end++;
+        return Encoding.UTF8.GetString(buf, offset, end - offset);
+    }
+
+    /// <summary>Reads until the buffer is full or the stream ends. Returns bytes read.</summary>
+    private static async Task<int> FillBufferAsync(Stream stream, byte[] buffer, CancellationToken ct)
+    {
+        int total = 0;
+        while (total < buffer.Length)
+        {
+            int n = await stream.ReadAsync(buffer.AsMemory(total), ct);
+            if (n == 0) break;
+            total += n;
+        }
+        return total;
+    }
+
+    /// <summary>Reads and discards exactly <paramref name="bytes"/> bytes from the stream.</summary>
+    private static async Task DrainAsync(Stream stream, long bytes, CancellationToken ct)
+    {
+        var buf = ArrayPool<byte>.Shared.Rent((int)Math.Min(bytes, 65536));
+        try
+        {
+            while (bytes > 0)
+            {
+                int n = await stream.ReadAsync(buf.AsMemory(0, (int)Math.Min(bytes, buf.Length)), ct);
+                if (n == 0) break;
+                bytes -= n;
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buf);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
 
     private static DetectedType DetectType(string pathname, byte[]? bytes)
     {
@@ -209,20 +395,6 @@ public sealed class UnityPackageExtractor(
             ".shader" or ".cginc" or ".hlsl" or ".glsl" => DetectedType.Shader,
             _ => DetectedType.Unknown,
         };
-    }
-
-    private static async Task<string> ReadTextAsync(Stream stream, CancellationToken ct)
-    {
-        using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms, ct);
-        return Encoding.UTF8.GetString(ms.ToArray());
-    }
-
-    private static async Task<byte[]> ReadBytesAsync(Stream stream, int length, CancellationToken ct)
-    {
-        var buf = new byte[length];
-        await stream.ReadExactlyAsync(buf, ct);
-        return buf;
     }
 
     private sealed class GuidBucket
