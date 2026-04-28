@@ -3,7 +3,6 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UnityPackageScanner.Core.Analysis;
-using UnityPackageScanner.Core.Extraction;
 using UnityPackageScanner.Core.Models;
 
 namespace UnityPackageScanner.UI.ViewModels;
@@ -11,7 +10,6 @@ namespace UnityPackageScanner.UI.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly ScanPipeline _pipeline;
-    private readonly InMemoryLogSink _logSink;
 
     [ObservableProperty]
     private string _packagePath = string.Empty;
@@ -29,35 +27,15 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _isScanning;
 
     [ObservableProperty]
-    private bool _isConsolePanelVisible;
-
-    [ObservableProperty]
     private string _scanStatus = string.Empty;
 
     public ObservableCollection<FindingViewModel> Findings { get; } = [];
     public ObservableCollection<PackageEntryViewModel> PackageEntries { get; } = [];
-    public ObservableCollection<LogEntryViewModel> LogEntries { get; } = [];
 
-    public MainViewModel(ScanPipeline pipeline, UnityPackageExtractor extractor, InMemoryLogSink logSink)
+    public MainViewModel(ScanPipeline pipeline)
     {
         _pipeline = pipeline;
-        _logSink = logSink;
-
-        // Mirror the in-memory sink's collection into LogEntryViewModels
-        logSink.Entries.CollectionChanged += (_, e) =>
-        {
-            if (e.NewItems is null) return;
-            foreach (LogEntry item in e.NewItems)
-                LogEntries.Add(new LogEntryViewModel(item));
-        };
-
-#if DEBUG
-        IsConsolePanelVisible = true;
-#endif
     }
-
-    [RelayCommand]
-    private void ToggleConsolePanel() => IsConsolePanelVisible = !IsConsolePanelVisible;
 
     [RelayCommand(CanExecute = nameof(CanScan))]
     private async Task ScanPackageAsync(string path, CancellationToken ct)

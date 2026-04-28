@@ -84,16 +84,18 @@ public sealed partial class InitializeOnLoadRule(ILogger<InitializeOnLoadRule> l
 
         var evidence = new List<string>();
 
-        if (InitAttrRegex().IsMatch(source))
+        foreach (Match m in InitAttrRegex().Matches(source))
         {
-            evidence.Add("[InitializeOnLoad] or [InitializeOnLoadMethod] attribute found");
-            logger.LogDebug("{RuleId}: InitializeOnLoad attribute matched in {Path}", RuleId, entry.Pathname);
+            int line = GetLineNumber(source, m.Index);
+            evidence.Add($"Line {line}: {m.Value.Trim()}");
+            logger.LogDebug("{RuleId}: InitializeOnLoad attribute at line {Line} in {Path}", RuleId, line, entry.Pathname);
         }
 
-        if (ProcessorBaseRegex().IsMatch(source))
+        foreach (Match m in ProcessorBaseRegex().Matches(source))
         {
-            evidence.Add("Subclass of AssetPostprocessor or AssetModificationProcessor found");
-            logger.LogDebug("{RuleId}: Processor base class matched in {Path}", RuleId, entry.Pathname);
+            int line = GetLineNumber(source, m.Index);
+            evidence.Add($"Line {line}: {m.Value.Trim()}");
+            logger.LogDebug("{RuleId}: Processor base class at line {Line} in {Path}", RuleId, line, entry.Pathname);
         }
 
         if (evidence.Count > 0)
@@ -105,7 +107,7 @@ public sealed partial class InitializeOnLoadRule(ILogger<InitializeOnLoadRule> l
                 Title = Title,
                 Description = "This script will execute automatically when the package is imported into a Unity project.",
                 Entry = entry,
-                Evidence = string.Join("; ", evidence),
+                Evidence = string.Join("\n", evidence),
             };
         }
 
@@ -130,18 +132,22 @@ public sealed partial class InitializeOnLoadRule(ILogger<InitializeOnLoadRule> l
 
         foreach (var type in module.GetAllTypes())
         {
+            var typeFqn = string.IsNullOrEmpty(type.Namespace?.ToString())
+                ? type.Name?.ToString() ?? ""
+                : $"{type.Namespace}.{type.Name}";
+
             // Custom attributes: [InitializeOnLoad] or [InitializeOnLoadMethod] on the type
             foreach (var attr in type.CustomAttributes)
             {
                 var attrName = attr.Constructor?.DeclaringType?.Name?.ToString() ?? "";
                 if (attrName is "InitializeOnLoadAttribute" or "InitializeOnLoadMethodAttribute")
-                    evidence.Add($"[{attrName.Replace("Attribute", "")}] on {type.Name}");
+                    evidence.Add($"[{attrName.Replace("Attribute", "")}] on {typeFqn}");
             }
 
             // Base class: AssetPostprocessor or AssetModificationProcessor
             var baseTypeName = type.BaseType?.Name?.ToString() ?? "";
             if (baseTypeName is "AssetPostprocessor" or "AssetModificationProcessor")
-                evidence.Add($"Inherits {baseTypeName} ({type.Name})");
+                evidence.Add($"Inherits {baseTypeName}: {typeFqn}");
 
             // Methods: [InitializeOnLoadMethod] on individual methods
             foreach (var method in type.Methods)
@@ -149,7 +155,7 @@ public sealed partial class InitializeOnLoadRule(ILogger<InitializeOnLoadRule> l
                 {
                     var attrName = attr.Constructor?.DeclaringType?.Name ?? "";
                     if (attrName == "InitializeOnLoadMethodAttribute")
-                        evidence.Add($"[InitializeOnLoadMethod] on {type.Name}.{method.Name}");
+                        evidence.Add($"[InitializeOnLoadMethod] on {typeFqn}.{method.Name}");
                 }
         }
 
@@ -163,10 +169,18 @@ public sealed partial class InitializeOnLoadRule(ILogger<InitializeOnLoadRule> l
                 Title = Title,
                 Description = "This compiled assembly will execute code automatically when imported into Unity.",
                 Entry = entry,
-                Evidence = string.Join("; ", evidence),
+                Evidence = string.Join("\n", evidence),
             };
         }
 
         await Task.CompletedTask;
+    }
+
+    private static int GetLineNumber(string text, int charIndex)
+    {
+        int line = 1;
+        for (int i = 0; i < charIndex && i < text.Length; i++)
+            if (text[i] == '\n') line++;
+        return line;
     }
 }

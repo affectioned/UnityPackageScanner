@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using UnityPackageScanner.Core.Models;
 
 namespace UnityPackageScanner.Tests.Core;
@@ -10,29 +9,6 @@ namespace UnityPackageScanner.Tests.Core;
 /// </summary>
 public sealed class ModelTests
 {
-    [Fact]
-    public void LogEntry_constructs_and_exposes_all_properties()
-    {
-        var ex = new InvalidOperationException("boom");
-        var props = new Dictionary<string, object> { ["key"] = "value" };
-
-        var entry = new LogEntry
-        {
-            Timestamp = DateTimeOffset.UtcNow,
-            Level = LogLevel.Warning,
-            Category = "MyCategory",
-            Message = "hello",
-            Exception = ex,
-            Properties = props,
-        };
-
-        entry.Level.Should().Be(LogLevel.Warning);
-        entry.Category.Should().Be("MyCategory");
-        entry.Message.Should().Be("hello");
-        entry.Exception.Should().BeSameAs(ex);
-        entry.Properties.Should().ContainKey("key");
-    }
-
     [Fact]
     public void ScanResult_constructs_and_exposes_all_properties()
     {

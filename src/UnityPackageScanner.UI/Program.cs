@@ -7,19 +7,13 @@ using UnityPackageScanner.UI;
 
 internal sealed class Program
 {
-    // Held here so App.axaml.cs can access them in OnFrameworkInitializationCompleted,
-    // which runs after the Win32 platform (and Dispatcher.UIThread) are fully initialised.
-    internal static InMemoryLogSink LogSink { get; } = new();
     internal static ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     // [STAThread] is required for Avalonia's Win32 message pump.
     [STAThread]
     public static void Main(string[] args)
     {
-        var serilog = LoggingConfiguration.CreateBaseConfiguration()
-            .WriteTo.Sink(LogSink)
-            .CreateLogger();
-
+        var serilog = LoggingConfiguration.CreateBaseConfiguration().CreateLogger();
         Log.Logger = serilog;
         LoggerFactory = new SerilogLoggerFactory(serilog, dispose: false);
 

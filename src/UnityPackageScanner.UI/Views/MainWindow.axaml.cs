@@ -64,10 +64,4 @@ public partial class MainWindow : Window
         if (sender is Border { DataContext: FindingViewModel finding })
             finding.IsExpanded = !finding.IsExpanded;
     }
-
-    private void OnClearLogClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel vm)
-            vm.LogEntries.Clear();
-    }
 }

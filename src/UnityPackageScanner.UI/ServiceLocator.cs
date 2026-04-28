@@ -16,7 +16,7 @@ internal static class ServiceLocator
     public static MainViewModel MainViewModel =>
         _mainViewModel ?? throw new InvalidOperationException("ServiceLocator not initialized.");
 
-    public static void Initialize(ILoggerFactory loggerFactory, InMemoryLogSink logSink)
+    public static void Initialize(ILoggerFactory loggerFactory)
     {
         var extractor = new UnityPackageExtractor(loggerFactory.CreateLogger<UnityPackageExtractor>());
 
@@ -37,6 +37,6 @@ internal static class ServiceLocator
 
         var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>());
 
-        _mainViewModel = new MainViewModel(pipeline, extractor, logSink);
+        _mainViewModel = new MainViewModel(pipeline);
     }
 }

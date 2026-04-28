@@ -71,7 +71,7 @@ dotnet run --project tools/RulesDocGenerator
 
 ## Forbidden patterns (with reasons)
 
-- **No `Console.WriteLine`** — use `ILogger<T>`. `Console.WriteLine` bypasses the in-app log panel and the rolling file sink.
+- **No `Console.WriteLine`** — use `ILogger<T>`. `Console.WriteLine` bypasses the rolling file sink.
 - **No hardcoded path separators** — always `Path.Combine`. Slashes differ between Windows and Linux.
 - **No exception swallowing** — catch, log with context, then rethrow or convert to a `Finding`. Silent catches hide bugs.
 - **No P/Invoke in `Core` or `Rules`** — these projects must be pure .NET and cross-platform.
@@ -89,11 +89,9 @@ dotnet run --project tools/RulesDocGenerator
 
 ## Logging
 
-Both frontends use `Microsoft.Extensions.Logging` via Serilog. The file sink (rolling daily, 7 days retained) writes to:
-- Windows: `%APPDATA%\UnityPackageScanner\logs\`
-- Linux/macOS: `~/.config/UnityPackageScanner/logs/`
+Both frontends use `Microsoft.Extensions.Logging` via Serilog. The file sink (rolling daily, 7 days retained) writes to a `logs/` directory next to the executable (`AppContext.BaseDirectory/logs/`). This is cross-platform and requires no per-OS path logic.
 
-The UI frontend adds an in-app console panel (toggled with F12). The CLI frontend writes to stderr via `SpectreConsoleSink`.
+The CLI frontend additionally writes to stderr via `SpectreConsoleSink`.
 
 Log at `Debug` level for heuristic decisions (especially obfuscation scoring). Users can flip verbose mode to see why a rule fired without rebuilding the app.
 

@@ -9,14 +9,11 @@ namespace UnityPackageScanner.Core.Logging;
 public static class LoggingConfiguration
 {
     public static string LogDirectory =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "UnityPackageScanner",
-            "logs");
+        Path.Combine(AppContext.BaseDirectory, "logs");
 
     /// <summary>
     /// Returns a Serilog <see cref="LoggerConfiguration"/> pre-wired with the rolling file sink.
-    /// Callers add their front-end-specific sink (in-app or Spectre.Console) before calling CreateLogger().
+    /// Callers add any front-end-specific sink (e.g. Spectre.Console for CLI) before calling CreateLogger().
     /// </summary>
     public static LoggerConfiguration CreateBaseConfiguration(bool verbose = false)
     {
