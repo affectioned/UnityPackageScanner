@@ -9,7 +9,7 @@
         Background="{StaticResource BgBrush}"
         DragDrop.AllowDrop="True">
 
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,*,2">
 
     <!-- Header row -->
     <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}"
@@ -38,10 +38,6 @@
         </StackPanel>
       </Grid>
     </Border>
-
-    <!-- Status bar when scanning -->
-    <ProgressBar Grid.Row="0" IsVisible="{Binding IsScanning}"
-                 IsIndeterminate="True" VerticalAlignment="Bottom" Height="2" />
 
     <!-- Main content split -->
     <Grid Grid.Row="1" ColumnDefinitions="*,4,*">
@@ -124,6 +120,10 @@
         </ScrollViewer>
       </Grid>
     </Grid>
+
+    <!-- Loading bar footer -->
+    <ProgressBar Grid.Row="2" IsVisible="{Binding IsScanning}"
+                 IsIndeterminate="True" />
 
     <!-- Drag-drop overlay hint -->
     <Border Grid.Row="1" IsHitTestVisible="False"
