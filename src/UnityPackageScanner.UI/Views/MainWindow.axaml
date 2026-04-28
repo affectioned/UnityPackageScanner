@@ -96,7 +96,17 @@
       <Grid Grid.Column="2" RowDefinitions="Auto,*">
         <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}"
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,4">
-          <TextBlock Text="Package Contents" Foreground="{StaticResource MutedTextBrush}" FontSize="11" />
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Grid.Column="0" Text="Package Contents"
+                       Foreground="{StaticResource MutedTextBrush}" FontSize="11"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="{Binding NameSortLabel}"
+                    Command="{Binding SortByNameCommand}"
+                    FontSize="10" Padding="5,1" Margin="0,0,4,0" />
+            <Button Grid.Column="2" Content="{Binding SizeSortLabel}"
+                    Command="{Binding SortBySizeCommand}"
+                    FontSize="10" Padding="5,1" />
+          </Grid>
         </Border>
 
         <ScrollViewer Grid.Row="1">

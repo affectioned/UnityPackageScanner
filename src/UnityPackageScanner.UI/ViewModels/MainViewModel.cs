@@ -31,6 +31,16 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _scanStatus = string.Empty;
 
+    [ObservableProperty]
+    private string _nameSortLabel = "Name";
+
+    [ObservableProperty]
+    private string _sizeSortLabel = "Size";
+
+    private enum SortField { Name, Size }
+    private SortField _sortField = SortField.Name;
+    private bool _sortAscending = true;
+
     public ObservableCollection<FindingViewModel> Findings { get; } = [];
     public ObservableCollection<PackageEntryViewModel> PackageEntries { get; } = [];
 
@@ -38,6 +48,43 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _pipeline = pipeline;
         _logger = logger;
+    }
+
+    [RelayCommand]
+    private void SortByName() => ApplySort(SortField.Name);
+
+    [RelayCommand]
+    private void SortBySize() => ApplySort(SortField.Size);
+
+    private void ApplySort(SortField field)
+    {
+        if (_sortField == field)
+            _sortAscending = !_sortAscending;
+        else
+        {
+            _sortField = field;
+            _sortAscending = true;
+        }
+
+        var items = (_sortField, _sortAscending) switch
+        {
+            (SortField.Name, true)  => PackageEntries.OrderBy(e => e.Pathname).ToList(),
+            (SortField.Name, false) => PackageEntries.OrderByDescending(e => e.Pathname).ToList(),
+            (SortField.Size, true)  => PackageEntries.OrderBy(e => e.Size).ToList(),
+            _                       => PackageEntries.OrderByDescending(e => e.Size).ToList(),
+        };
+
+        PackageEntries.Clear();
+        foreach (var item in items) PackageEntries.Add(item);
+
+        UpdateSortLabels();
+    }
+
+    private void UpdateSortLabels()
+    {
+        string arrow = _sortAscending ? " ↑" : " ↓";
+        NameSortLabel = _sortField == SortField.Name ? "Name" + arrow : "Name";
+        SizeSortLabel = _sortField == SortField.Size ? "Size" + arrow : "Size";
     }
 
     [RelayCommand(CanExecute = nameof(CanScan))]
@@ -49,6 +96,9 @@ public sealed partial class MainViewModel : ObservableObject
         ScanStatus = "Scanning…";
         Findings.Clear();
         PackageEntries.Clear();
+        _sortField = SortField.Name;
+        _sortAscending = true;
+        UpdateSortLabels();
 
         try
         {
