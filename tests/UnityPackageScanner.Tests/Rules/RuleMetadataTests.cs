@@ -9,6 +9,7 @@ public sealed class RuleMetadataTests
 {
     public static TheoryData<IDetectionRule> AllRules() => new()
     {
+        new ObfuscatedDllRule(NullLogger<ObfuscatedDllRule>.Instance),
         new InitializeOnLoadRule(NullLogger<InitializeOnLoadRule>.Instance),
         new NativePluginRule(NullLogger<NativePluginRule>.Instance),
         new NetworkAccessRule(NullLogger<NetworkAccessRule>.Instance),
@@ -16,6 +17,9 @@ public sealed class RuleMetadataTests
         new ProcessSpawnRule(NullLogger<ProcessSpawnRule>.Instance),
         new ReflectionLoadRule(NullLogger<ReflectionLoadRule>.Instance),
         new SuspiciousPInvokeRule(NullLogger<SuspiciousPInvokeRule>.Instance),
+        new EmbeddedEncryptedResourceRule(NullLogger<EmbeddedEncryptedResourceRule>.Instance),
+        new HiddenFolderRule(NullLogger<HiddenFolderRule>.Instance),
+        new SuspiciousFileTypeRule(NullLogger<SuspiciousFileTypeRule>.Instance),
     };
 
     [Theory]

@@ -1,0 +1,35 @@
+﻿# Scan Result: CRITICAL
+
+| Field | Value |
+|---|---|
+| Package | `/test/SuspiciousAsset.unitypackage` |
+| SHA-256 | `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` |
+| Entries | 2 |
+| Duration | 42ms |
+
+## Findings
+
+### CRITICAL
+
+#### Auto-executing editor code
+
+| Field | Value |
+|---|---|
+| Rule | UPS002 |
+| File | `Assets/Editor/AutoRun.cs` |
+| Evidence | [InitializeOnLoad] or [InitializeOnLoadMethod] attribute found |
+
+This script will execute automatically when the package is imported into a Unity project.
+
+### HIGH RISK
+
+#### Obfuscated managed assembly
+
+| Field | Value |
+|---|---|
+| Rule | UPS001 |
+| File | `Assets/Plugins/evil.dll` |
+| Evidence | Control characters in type or method names |
+
+This managed assembly shows signs of obfuscation.
+

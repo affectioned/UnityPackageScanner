@@ -1,0 +1,10 @@
+﻿# Scan Result: CLEAN
+
+| Field | Value |
+|---|---|
+| Package | `/test/CleanAsset.unitypackage` |
+| SHA-256 | `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` |
+| Entries | 1 |
+| Duration | 10ms |
+
+No findings.

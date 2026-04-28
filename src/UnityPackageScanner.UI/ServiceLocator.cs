@@ -22,6 +22,7 @@ internal static class ServiceLocator
 
         var rules = new IDetectionRule[]
         {
+            new ObfuscatedDllRule(loggerFactory.CreateLogger<ObfuscatedDllRule>()),
             new InitializeOnLoadRule(loggerFactory.CreateLogger<InitializeOnLoadRule>()),
             new NativePluginRule(loggerFactory.CreateLogger<NativePluginRule>()),
             new PathAnomalyRule(loggerFactory.CreateLogger<PathAnomalyRule>()),
@@ -29,6 +30,9 @@ internal static class ServiceLocator
             new ProcessSpawnRule(loggerFactory.CreateLogger<ProcessSpawnRule>()),
             new ReflectionLoadRule(loggerFactory.CreateLogger<ReflectionLoadRule>()),
             new SuspiciousPInvokeRule(loggerFactory.CreateLogger<SuspiciousPInvokeRule>()),
+            new EmbeddedEncryptedResourceRule(loggerFactory.CreateLogger<EmbeddedEncryptedResourceRule>()),
+            new HiddenFolderRule(loggerFactory.CreateLogger<HiddenFolderRule>()),
+            new SuspiciousFileTypeRule(loggerFactory.CreateLogger<SuspiciousFileTypeRule>()),
         };
 
         var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>());

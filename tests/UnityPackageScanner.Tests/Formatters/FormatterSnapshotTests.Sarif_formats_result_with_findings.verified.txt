@@ -1,0 +1,80 @@
+﻿{
+  "version": "2.1.0",
+  "schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "UnityPackageScanner",
+          "informationUri": "https://github.com/abbey/UnityPackageScanner",
+          "rules": [
+            {
+              "id": "UPS002",
+              "name": "AutoExecutingEditorCode",
+              "shortDescription": {
+                "text": "Auto-executing editor code"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "UPS001",
+              "name": "ObfuscatedManagedAssembly",
+              "shortDescription": {
+                "text": "Obfuscated managed assembly"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "UPS002",
+          "level": "error",
+          "message": {
+            "text": "This script will execute automatically when the package is imported into a Unity project. Evidence: [InitializeOnLoad] or [InitializeOnLoadMethod] attribute found"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Assets/Editor/AutoRun.cs"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UPS001",
+          "level": "error",
+          "message": {
+            "text": "This managed assembly shows signs of obfuscation. Evidence: Control characters in type or method names"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Assets/Plugins/evil.dll"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "%2Ftest%2FSuspiciousAsset.unitypackage"
+          },
+          "hashes": {
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        }
+      ]
+    }
+  ]
+}

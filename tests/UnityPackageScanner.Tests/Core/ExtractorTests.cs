@@ -181,6 +181,45 @@ public sealed class ExtractorTests
     }
 
     [Fact]
+    public async Task Total_memory_cap_stops_loading_bytes_when_exceeded()
+    {
+        // Three 100-byte entries; cap is 150 bytes — only the first entry fits.
+        const int entrySize = 100;
+        const long cap = 150;
+        var extractor = new UnityPackageExtractor(NullLogger<UnityPackageExtractor>.Instance, totalMemoryCap: cap);
+
+        var data = new byte[entrySize];
+        var package = new UnityPackageBuilder()
+            .WithAsset("Assets/A.bin", data)
+            .WithAsset("Assets/B.bin", data)
+            .WithAsset("Assets/C.bin", data)
+            .Build();
+
+        var entries = await extractor.ExtractFromStreamAsync(package);
+
+        entries.Should().HaveCount(3);
+        entries.Count(e => e.AssetBytes is not null).Should().Be(1, "only the first entry fits within the cap");
+        entries.Count(e => e.AssetTooLargeForMemory).Should().Be(2, "remaining entries are drained, not loaded");
+    }
+
+    [Fact]
+    public async Task Total_memory_cap_does_not_affect_packages_within_limit()
+    {
+        const long cap = 10_000;
+        var extractor = new UnityPackageExtractor(NullLogger<UnityPackageExtractor>.Instance, totalMemoryCap: cap);
+
+        var package = new UnityPackageBuilder()
+            .WithAsset("Assets/A.cs", "class A {}")
+            .WithAsset("Assets/B.cs", "class B {}")
+            .Build();
+
+        var entries = await extractor.ExtractFromStreamAsync(package);
+
+        entries.Should().HaveCount(2);
+        entries.Should().AllSatisfy(e => e.AssetBytes.Should().NotBeNull("both entries fit within the cap"));
+    }
+
+    [Fact]
     public async Task Handles_truncated_gzip_gracefully()
     {
         var package = new UnityPackageBuilder()

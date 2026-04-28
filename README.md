@@ -4,6 +4,8 @@ Static analysis for `.unitypackage` files — detect potentially malicious conte
 
 Malicious packages are a recurring problem in the VRChat and broader Unity asset-sharing community. A `.unitypackage` can contain C# editor scripts that run automatically the moment it's imported, obfuscated DLLs that fetch payloads from the network, and native binaries that Unity loads on startup. This tool inspects a package's contents without importing it, and flags anything that looks dangerous.
 
+**11 detection rules** covering obfuscation, auto-execution, native plugins, path traversal, network access, process spawning, reflection loading, suspicious P/Invoke, encrypted embedded resources, hidden directories, and dangerous file types.
+
 ## Install
 
 Download a release archive from the [Releases](../../releases) page. Two archives per platform: one for the GUI and one for the CLI. No installer, no runtime required — extract and run.
@@ -26,6 +28,7 @@ unity-package-scanner SomeAsset.unitypackage
 
 ## Example output
 
+**Text (default):**
 ```
 Verdict: CRITICAL  SomeAsset.unitypackage
 SHA-256: 338870b9...  Entries: 3  Duration: 120ms
@@ -36,6 +39,8 @@ SHA-256: 338870b9...  Entries: 3  Duration: 120ms
     Evidence: [InitializeOnLoad] or [InitializeOnLoadMethod] attribute found
     This script will execute automatically when the package is imported.
 ```
+
+**Markdown** (`--format markdown`), **JSON** (`--format json`), and **SARIF** (`--format sarif`) are also supported — useful for CI pipelines and GitHub code-scanning integration.
 
 ## Documentation
 

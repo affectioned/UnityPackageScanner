@@ -9,11 +9,25 @@ namespace UnityPackageScanner.Core.Extraction;
 
 /// <summary>
 /// Reads a .unitypackage (gzipped tar) and returns a list of <see cref="PackageEntry"/> records.
-/// Asset files larger than <see cref="InMemoryThresholdBytes"/> are not read into memory.
+/// Two memory guards apply:
+/// <list type="bullet">
+///   <item><see cref="InMemoryThresholdBytes"/> — per-file cap (default 50 MB).</item>
+///   <item><see cref="TotalMemoryCapBytes"/> — total across all entries (default 512 MB).</item>
+/// </list>
+/// Entries whose bytes are not loaded have <see cref="PackageEntry.AssetTooLargeForMemory"/> set to true.
 /// </summary>
-public sealed class UnityPackageExtractor(ILogger<UnityPackageExtractor> logger)
+public sealed class UnityPackageExtractor(
+    ILogger<UnityPackageExtractor> logger,
+    long totalMemoryCap = 512L * 1024L * 1024L)
 {
+    /// <summary>Per-file cap: files larger than this are not read into memory.</summary>
     public const long InMemoryThresholdBytes = 50 * 1024 * 1024; // 50 MB
+
+    /// <summary>
+    /// Total bytes that may be loaded across all entries in one package.
+    /// The default used when no value is passed to the constructor.
+    /// </summary>
+    public const long TotalMemoryCapBytes = 512L * 1024L * 1024L; // 512 MB
 
     public async Task<(IReadOnlyList<PackageEntry> Entries, string Sha256)> ExtractAsync(
         string path, CancellationToken ct = default)
@@ -38,6 +52,8 @@ public sealed class UnityPackageExtractor(ILogger<UnityPackageExtractor> logger)
     {
         // guid -> { "asset": bytes, "pathname": text, "asset.meta": text }
         var buckets = new Dictionary<string, GuidBucket>(StringComparer.OrdinalIgnoreCase);
+        long totalBytesLoaded = 0;
+        bool capWarningLogged = false;
 
         await using var gzip = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
         using var tar = new TarReader(gzip, leaveOpen: true);
@@ -78,8 +94,26 @@ public sealed class UnityPackageExtractor(ILogger<UnityPackageExtractor> logger)
                 case "asset":
                     if (entry.Length is > 0 and <= InMemoryThresholdBytes)
                     {
-                        bucket.AssetBytes = await ReadBytesAsync(entry.DataStream, (int)entry.Length, ct);
-                        bucket.AssetSize = entry.Length;
+                        if (totalBytesLoaded + entry.Length <= totalMemoryCap)
+                        {
+                            bucket.AssetBytes = await ReadBytesAsync(entry.DataStream, (int)entry.Length, ct);
+                            bucket.AssetSize = entry.Length;
+                            totalBytesLoaded += entry.Length;
+                        }
+                        else
+                        {
+                            if (!capWarningLogged)
+                            {
+                                logger.LogWarning(
+                                    "Package exceeds total in-memory cap of {CapMb} MB; " +
+                                    "remaining asset bytes will not be loaded into memory for analysis",
+                                    totalMemoryCap / 1024 / 1024);
+                                capWarningLogged = true;
+                            }
+                            bucket.AssetSize = entry.Length;
+                            bucket.AssetTooLarge = true;
+                            await entry.DataStream.CopyToAsync(Stream.Null, ct);
+                        }
                     }
                     else if (entry.Length > InMemoryThresholdBytes)
                     {

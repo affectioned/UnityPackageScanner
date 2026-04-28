@@ -5,6 +5,7 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\UnityPackageScanner.Cli\UnityPackageScanner.Cli.csproj" />
     <ProjectReference Include="..\..\src\UnityPackageScanner.Core\UnityPackageScanner.Core.csproj" />
     <ProjectReference Include="..\..\src\UnityPackageScanner.Rules\UnityPackageScanner.Rules.csproj" />
     <ProjectReference Include="..\..\src\UnityPackageScanner.TestFixtures\UnityPackageScanner.TestFixtures.csproj" />

@@ -1,0 +1,10 @@
+﻿{
+  "packagePath": "/test/CleanAsset.unitypackage",
+  "packageSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "packageSize": 1024,
+  "entryCount": 1,
+  "scanDurationMs": 10,
+  "scannedAt": "2024-01-01T00:00:00+00:00",
+  "verdict": "Clean",
+  "findings": []
+}

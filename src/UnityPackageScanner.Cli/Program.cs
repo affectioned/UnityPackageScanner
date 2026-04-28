@@ -79,6 +79,7 @@ root.SetHandler(async (InvocationContext ctx) =>
     // --- Rules ---
     var rules = new IDetectionRule[]
     {
+        new ObfuscatedDllRule(loggerFactory.CreateLogger<ObfuscatedDllRule>()),
         new InitializeOnLoadRule(loggerFactory.CreateLogger<InitializeOnLoadRule>()),
         new NativePluginRule(loggerFactory.CreateLogger<NativePluginRule>()),
         new PathAnomalyRule(loggerFactory.CreateLogger<PathAnomalyRule>()),
@@ -86,6 +87,9 @@ root.SetHandler(async (InvocationContext ctx) =>
         new ProcessSpawnRule(loggerFactory.CreateLogger<ProcessSpawnRule>()),
         new ReflectionLoadRule(loggerFactory.CreateLogger<ReflectionLoadRule>()),
         new SuspiciousPInvokeRule(loggerFactory.CreateLogger<SuspiciousPInvokeRule>()),
+        new EmbeddedEncryptedResourceRule(loggerFactory.CreateLogger<EmbeddedEncryptedResourceRule>()),
+        new HiddenFolderRule(loggerFactory.CreateLogger<HiddenFolderRule>()),
+        new SuspiciousFileTypeRule(loggerFactory.CreateLogger<SuspiciousFileTypeRule>()),
     };
 
     if (listRules)
@@ -178,6 +182,7 @@ static void WriteOutput(ScanResult result, string format, FileInfo? outputFile, 
     {
         "json" => UnityPackageScanner.Cli.JsonFormatter.Format(result),
         "sarif" => UnityPackageScanner.Cli.SarifFormatter.Format(result),
+        "markdown" => UnityPackageScanner.Cli.MarkdownFormatter.Format(result),
         _ => $"Format '{format}' not yet implemented.",
     };
 

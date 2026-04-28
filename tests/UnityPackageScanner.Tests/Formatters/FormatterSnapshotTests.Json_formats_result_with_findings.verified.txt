@@ -1,0 +1,27 @@
+﻿{
+  "packagePath": "/test/SuspiciousAsset.unitypackage",
+  "packageSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "packageSize": 98765,
+  "entryCount": 2,
+  "scanDurationMs": 42,
+  "scannedAt": "2024-01-01T00:00:00+00:00",
+  "verdict": "Critical",
+  "findings": [
+    {
+      "ruleId": "UPS002",
+      "severity": "Critical",
+      "title": "Auto-executing editor code",
+      "description": "This script will execute automatically when the package is imported into a Unity project.",
+      "file": "Assets/Editor/AutoRun.cs",
+      "evidence": "[InitializeOnLoad] or [InitializeOnLoadMethod] attribute found"
+    },
+    {
+      "ruleId": "UPS001",
+      "severity": "HighRisk",
+      "title": "Obfuscated managed assembly",
+      "description": "This managed assembly shows signs of obfuscation.",
+      "file": "Assets/Plugins/evil.dll",
+      "evidence": "Control characters in type or method names"
+    }
+  ]
+}

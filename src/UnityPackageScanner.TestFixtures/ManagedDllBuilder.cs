@@ -1,3 +1,4 @@
+using AsmResolver;
 using AsmResolver.DotNet;
 using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Signatures;
@@ -104,6 +105,80 @@ public static class ManagedDllBuilder
             ]);
         });
 
+    /// <summary>
+    /// Creates a managed DLL whose type and method names contain control characters (0x01–0x03).
+    /// This is the most reliable obfuscation signal used by ConfuserEx and similar tools.
+    /// The type also carries a [System.Reflection.ObfuscationAttribute] to exercise attribute detection.
+    /// </summary>
+    public static byte[] WithObfuscatedNames(string moduleName = "TestObfuscated.dll") =>
+        Build(moduleName, (module, _) =>
+        {
+            var obfType = new TypeDefinition("", "\x01\x02\x03",
+                TypeAttributes.Public | TypeAttributes.Class,
+                module.CorLibTypeFactory.Object.ToTypeDefOrRef());
+
+            // Add [System.Reflection.ObfuscationAttribute] to exercise the attribute-detection path.
+            var sysRuntime = AddAssemblyRef(module, "System.Runtime");
+            var obfAttrRef = new TypeReference(module, sysRuntime, "System.Reflection", "ObfuscationAttribute");
+            obfType.CustomAttributes.Add(new CustomAttribute(
+                new MemberReference(obfAttrRef, ".ctor",
+                    MethodSignature.CreateInstance(module.CorLibTypeFactory.Void))));
+
+            var method = new MethodDefinition("\x04\x05",
+                MethodAttributes.Public | MethodAttributes.Static,
+                MethodSignature.CreateStatic(module.CorLibTypeFactory.Void));
+            method.CilMethodBody = new CilMethodBody(method);
+            method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Ret));
+            obfType.Methods.Add(method);
+
+            module.TopLevelTypes.Add(obfType);
+        });
+
+    /// <summary>
+    /// Creates a managed DLL where the type name is normal but method names contain control characters.
+    /// Tests the method-level obfuscation detection path separately from the type-level one.
+    /// </summary>
+    public static byte[] WithObfuscatedMethodNamesOnly(string moduleName = "TestObfMethodOnly.dll") =>
+        Build(moduleName, (module, _) =>
+        {
+            var type = new TypeDefinition("", "NormalLookingType",
+                TypeAttributes.Public | TypeAttributes.Class,
+                module.CorLibTypeFactory.Object.ToTypeDefOrRef());
+
+            var method = new MethodDefinition("\x01\x02",
+                MethodAttributes.Public | MethodAttributes.Static,
+                MethodSignature.CreateStatic(module.CorLibTypeFactory.Void));
+            method.CilMethodBody = new CilMethodBody(method);
+            method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Ret));
+            type.Methods.Add(method);
+
+            module.TopLevelTypes.Add(type);
+        });
+
+    /// <summary>
+    /// Creates a managed DLL with many types and methods whose names are ≤2 characters long.
+    /// Exercises the short-name ratio scoring path in ObfuscatedDllRule.
+    /// </summary>
+    public static byte[] WithManyShortNames(int count = 12, string moduleName = "TestShortNames.dll") =>
+        Build(moduleName, (module, _) =>
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var t = new TypeDefinition("", $"T{i}",
+                    TypeAttributes.Public | TypeAttributes.Class,
+                    module.CorLibTypeFactory.Object.ToTypeDefOrRef());
+
+                var m = new MethodDefinition($"M{i}",
+                    MethodAttributes.Public | MethodAttributes.Static,
+                    MethodSignature.CreateStatic(module.CorLibTypeFactory.Void));
+                m.CilMethodBody = new CilMethodBody(m);
+                m.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Ret));
+                t.Methods.Add(m);
+
+                module.TopLevelTypes.Add(t);
+            }
+        });
+
     /// <summary>Creates a managed DLL with a class that inherits <c>UnityEditor.AssetPostprocessor</c>.</summary>
     public static byte[] WithAssetPostprocessor(string moduleName = "TestPostprocessor.dll") =>
         Build(moduleName, (module, _) =>
@@ -111,6 +186,41 @@ public static class ManagedDllBuilder
             var unityEditor = AddAssemblyRef(module, "UnityEditor");
             var baseRef = new TypeReference(module, unityEditor, "UnityEditor", "AssetPostprocessor");
             module.TopLevelTypes.Add(new TypeDefinition("", "MyProcessor", TypeAttributes.Public, baseRef));
+        });
+
+    /// <summary>
+    /// Creates a managed DLL with a high-entropy (pseudo-random) embedded resource.
+    /// Exercises the EmbeddedEncryptedResourceRule entropy detection path.
+    /// Uses a fixed seed so the bytes — and therefore the entropy — are deterministic across test runs.
+    /// </summary>
+    public static byte[] WithHighEntropyEmbeddedResource(
+        int resourceSizeBytes = 2048,
+        string moduleName = "TestHighEntropy.dll") =>
+        Build(moduleName, (module, _) =>
+        {
+            var data = new byte[resourceSizeBytes];
+            new Random(unchecked((int)0xDEADBEEFu)).NextBytes(data); // near-uniform → entropy ~7.99
+
+            module.Resources.Add(new ManifestResource(
+                "encrypted_payload",
+                ManifestResourceAttributes.Private,
+                new DataSegment(data)));
+        });
+
+    /// <summary>
+    /// Creates a managed DLL with a small, low-entropy embedded resource (repeating bytes).
+    /// Should NOT trigger EmbeddedEncryptedResourceRule.
+    /// </summary>
+    public static byte[] WithLowEntropyEmbeddedResource(string moduleName = "TestLowEntropy.dll") =>
+        Build(moduleName, (module, _) =>
+        {
+            var data = new byte[1024];
+            Array.Fill(data, (byte)'A'); // entropy ≈ 0 bits/byte
+
+            module.Resources.Add(new ManifestResource(
+                "string_table.resources",
+                ManifestResourceAttributes.Public,
+                new DataSegment(data)));
         });
 
     // --- helpers ---
