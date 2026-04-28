@@ -8,6 +8,8 @@ Malicious packages are a recurring problem in the VRChat and broader Unity asset
 
 **11 detection rules** covering obfuscation, auto-execution, native plugins, path traversal, network access, process spawning, reflection loading, suspicious P/Invoke, encrypted embedded resources, hidden directories, and dangerous file types.
 
+<img width="1113" height="894" alt="image" src="https://github.com/user-attachments/assets/8d75de29-9223-4b7d-a7f5-665ab019e54c" />
+
 ## Install
 
 Download a release archive from the [Releases](../../releases) page. Two archives per platform: one for the GUI and one for the CLI. No installer, no runtime required — extract and run.
