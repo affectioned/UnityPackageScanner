@@ -130,6 +130,15 @@ public sealed class UnityPackageExtractor(
             }
         }
         }
+        catch (InvalidDataException ex)
+        {
+            // Some packages produced by older Unity versions or third-party tools use a
+            // non-standard tar header (e.g. unexpected version field).  Return whatever
+            // entries were successfully parsed rather than aborting the scan entirely.
+            logger.LogWarning(ex,
+                "Tar archive contains a malformed header — returning {Count} partial entries",
+                buckets.Count);
+        }
         catch (EndOfStreamException) when (buckets.Count == 0)
         {
             // An empty or zero-entry tar archive produces no entries; not an error.

@@ -37,6 +37,6 @@ internal static class ServiceLocator
 
         var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>());
 
-        _mainViewModel = new MainViewModel(pipeline);
+        _mainViewModel = new MainViewModel(pipeline, loggerFactory.CreateLogger<MainViewModel>());
     }
 }

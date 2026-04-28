@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using UnityPackageScanner.Core.Analysis;
 using UnityPackageScanner.Core.Models;
 
@@ -10,6 +11,7 @@ namespace UnityPackageScanner.UI.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly ScanPipeline _pipeline;
+    private readonly ILogger<MainViewModel> _logger;
 
     [ObservableProperty]
     private string _packagePath = string.Empty;
@@ -32,9 +34,10 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<FindingViewModel> Findings { get; } = [];
     public ObservableCollection<PackageEntryViewModel> PackageEntries { get; } = [];
 
-    public MainViewModel(ScanPipeline pipeline)
+    public MainViewModel(ScanPipeline pipeline, ILogger<MainViewModel> logger)
     {
         _pipeline = pipeline;
+        _logger = logger;
     }
 
     [RelayCommand(CanExecute = nameof(CanScan))]
@@ -65,6 +68,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Scan failed for {Path}", path);
             ScanStatus = $"Error: {ex.Message}";
             UpdateVerdict(null);
         }
