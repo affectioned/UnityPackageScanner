@@ -1,5 +1,7 @@
 # Unity Package Scanner
 
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+
 Static analysis for `.unitypackage` files — detect potentially malicious content before you import it into a Unity project.
 
 Malicious packages are a recurring problem in the VRChat and broader Unity asset-sharing community. A `.unitypackage` can contain C# editor scripts that run automatically the moment it's imported, obfuscated DLLs that fetch payloads from the network, and native binaries that Unity loads on startup. This tool inspects a package's contents without importing it, and flags anything that looks dangerous.
@@ -40,7 +42,7 @@ SHA-256: 338870b9...  Entries: 3  Duration: 120ms
     This script will execute automatically when the package is imported.
 ```
 
-**Markdown** (`--format markdown`), **JSON** (`--format json`), and **SARIF** (`--format sarif`) are also supported — useful for CI pipelines and GitHub code-scanning integration.
+**JSON** (`--format json`), **SARIF** (`--format sarif`), and **Markdown** (`--format markdown`) are also supported. SARIF integrates directly with GitHub code-scanning. Markdown is useful for pasting into issue comments or PR descriptions. Use `--output report.md` to write to a file instead of stdout.
 
 ## Documentation
 

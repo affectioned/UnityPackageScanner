@@ -42,7 +42,9 @@ dotnet test --filter "ClassName=InitializeOnLoadRuleTests"   # Run one class
 dotnet test --collect:"XPlat Code Coverage"                  # With coverage
 ```
 
-Coverage gate: ≥85% line coverage on `Core` and `Rules`. Gate is enforced in CI.
+Coverage gate: ≥85% overall line coverage across all assemblies (Core, Rules, CLI). Enforced in CI via ReportGenerator + `coverlet.runsettings`. Excluded from measurement: `Program.cs` (top-level statements, no class to decorate) and `SpectreConsoleSink` (wraps live stderr — not unit-testable). Do not add new untested code to other classes without corresponding tests.
+
+CI `run:` steps use `shell: bash` via a job-level default — this applies on both `windows-latest` and `ubuntu-latest`. Do not use PowerShell-specific syntax (backtick continuations, `$env:`, etc.) in workflow files.
 
 ## Build commands
 
