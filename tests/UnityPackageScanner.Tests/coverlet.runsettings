@@ -8,8 +8,6 @@
           <ExcludeByAttribute>ExcludeFromCodeCoverage,GeneratedCode,DebuggerNonUserCode</ExcludeByAttribute>
           <!-- Exclude the Roslyn-generated regex state machines -->
           <Exclude>[*]System.Text.RegularExpressions.Generated.*</Exclude>
-          <!-- TestFixtures is a test-helper assembly, not domain logic -->
-          <Exclude>[UnityPackageScanner.TestFixtures]*</Exclude>
           <!-- Program.cs uses top-level statements; no class to decorate -->
           <ExcludeByFile>**/UnityPackageScanner.Cli/Program.cs</ExcludeByFile>
         </Configuration>

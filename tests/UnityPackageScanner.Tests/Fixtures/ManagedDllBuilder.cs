@@ -107,7 +107,6 @@ public static class ManagedDllBuilder
 
     /// <summary>
     /// Creates a managed DLL whose type and method names contain control characters (0x01–0x03).
-    /// This is the most reliable obfuscation signal used by ConfuserEx and similar tools.
     /// The type also carries a [System.Reflection.ObfuscationAttribute] to exercise attribute detection.
     /// </summary>
     public static byte[] WithObfuscatedNames(string moduleName = "TestObfuscated.dll") =>
@@ -117,7 +116,6 @@ public static class ManagedDllBuilder
                 TypeAttributes.Public | TypeAttributes.Class,
                 module.CorLibTypeFactory.Object.ToTypeDefOrRef());
 
-            // Add [System.Reflection.ObfuscationAttribute] to exercise the attribute-detection path.
             var sysRuntime = AddAssemblyRef(module, "System.Runtime");
             var obfAttrRef = new TypeReference(module, sysRuntime, "System.Reflection", "ObfuscationAttribute");
             obfType.CustomAttributes.Add(new CustomAttribute(
@@ -136,7 +134,6 @@ public static class ManagedDllBuilder
 
     /// <summary>
     /// Creates a managed DLL where the type name is normal but method names contain control characters.
-    /// Tests the method-level obfuscation detection path separately from the type-level one.
     /// </summary>
     public static byte[] WithObfuscatedMethodNamesOnly(string moduleName = "TestObfMethodOnly.dll") =>
         Build(moduleName, (module, _) =>
@@ -157,7 +154,6 @@ public static class ManagedDllBuilder
 
     /// <summary>
     /// Creates a managed DLL with many types and methods whose names are ≤2 characters long.
-    /// Exercises the short-name ratio scoring path in ObfuscatedDllRule.
     /// </summary>
     public static byte[] WithManyShortNames(int count = 12, string moduleName = "TestShortNames.dll") =>
         Build(moduleName, (module, _) =>
@@ -190,8 +186,7 @@ public static class ManagedDllBuilder
 
     /// <summary>
     /// Creates a managed DLL with a high-entropy (pseudo-random) embedded resource.
-    /// Exercises the EmbeddedEncryptedResourceRule entropy detection path.
-    /// Uses a fixed seed so the bytes — and therefore the entropy — are deterministic across test runs.
+    /// Uses a fixed seed so entropy is deterministic across test runs.
     /// </summary>
     public static byte[] WithHighEntropyEmbeddedResource(
         int resourceSizeBytes = 2048,
@@ -199,7 +194,7 @@ public static class ManagedDllBuilder
         Build(moduleName, (module, _) =>
         {
             var data = new byte[resourceSizeBytes];
-            new Random(unchecked((int)0xDEADBEEFu)).NextBytes(data); // near-uniform → entropy ~7.99
+            new Random(unchecked((int)0xDEADBEEFu)).NextBytes(data);
 
             module.Resources.Add(new ManifestResource(
                 "encrypted_payload",
@@ -215,7 +210,7 @@ public static class ManagedDllBuilder
         Build(moduleName, (module, _) =>
         {
             var data = new byte[1024];
-            Array.Fill(data, (byte)'A'); // entropy ≈ 0 bits/byte
+            Array.Fill(data, (byte)'A');
 
             module.Resources.Add(new ManifestResource(
                 "string_table.resources",

@@ -10,9 +10,8 @@ src/
   UnityPackageScanner.Rules/       # IDetectionRule implementations
   UnityPackageScanner.Cli/         # CLI frontend (System.CommandLine + Spectre.Console)
   UnityPackageScanner.UI/          # Avalonia 11 GUI frontend
-  UnityPackageScanner.TestFixtures/# Programmatic .unitypackage generators for tests
 tests/
-  UnityPackageScanner.Tests/       # xUnit tests for Core, Rules, Fixtures
+  UnityPackageScanner.Tests/       # xUnit tests; Fixtures/ subfolder contains package builders
 tools/
   RulesDocGenerator/               # Generates docs/rules.md from rule metadata
 docs/

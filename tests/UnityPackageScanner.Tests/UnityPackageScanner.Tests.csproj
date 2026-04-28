@@ -8,9 +8,10 @@
     <ProjectReference Include="..\..\src\UnityPackageScanner.Cli\UnityPackageScanner.Cli.csproj" />
     <ProjectReference Include="..\..\src\UnityPackageScanner.Core\UnityPackageScanner.Core.csproj" />
     <ProjectReference Include="..\..\src\UnityPackageScanner.Rules\UnityPackageScanner.Rules.csproj" />
-    <ProjectReference Include="..\..\src\UnityPackageScanner.TestFixtures\UnityPackageScanner.TestFixtures.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AsmResolver.DotNet" Version="5.5.1" />
+    <PackageReference Include="AsmResolver.PE" Version="5.5.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
