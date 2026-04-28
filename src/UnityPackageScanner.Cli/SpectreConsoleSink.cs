@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Serilog.Core;
 using Serilog.Events;
 using Spectre.Console;
@@ -8,6 +9,7 @@ namespace UnityPackageScanner.Cli;
 /// Writes Serilog events to stderr via Spectre.Console.
 /// Kept separate from stdout so structured output (JSON, SARIF, etc.) is not polluted.
 /// </summary>
+[ExcludeFromCodeCoverage]
 internal sealed class SpectreConsoleSink : ILogEventSink
 {
     private readonly IAnsiConsole _stderr = AnsiConsole.Create(new AnsiConsoleSettings
