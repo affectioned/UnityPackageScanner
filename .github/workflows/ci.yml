@@ -157,8 +157,9 @@ jobs:
           cp README.md LICENSE ./publish/cli/$RID/
           if [ "$RID" = "win-x64" ]; then
             # zip is not available in Git Bash on Windows runners; 7z always is.
-            7z a -tzip "UnityPackageScanner-${TAG}-${RID}.zip" "./publish/gui/$RID/*"
-            7z a -tzip "unity-package-scanner-cli-${TAG}-${RID}.zip" "./publish/cli/$RID/*"
+            # cd into the dir first so 7z stores files at root, not under publish/gui/win-x64/.
+            (cd "./publish/gui/$RID" && 7z a -tzip "../../../UnityPackageScanner-${TAG}-${RID}.zip" .)
+            (cd "./publish/cli/$RID" && 7z a -tzip "../../../unity-package-scanner-cli-${TAG}-${RID}.zip" .)
           else
             tar -czf "UnityPackageScanner-${TAG}-${RID}.tar.gz" -C "./publish/gui/$RID" .
             tar -czf "unity-package-scanner-cli-${TAG}-${RID}.tar.gz" -C "./publish/cli/$RID" .
