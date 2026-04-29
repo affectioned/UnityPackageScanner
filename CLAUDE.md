@@ -8,6 +8,7 @@ Static analysis tool for `.unitypackage` files. Detects malicious content (auto-
 src/
   UnityPackageScanner.Core/        # Extraction, package model, analysis pipeline
   UnityPackageScanner.Rules/       # IDetectionRule implementations
+  UnityPackageScanner.DllWorker/   # Out-of-process worker that runs AsmResolver rules
   UnityPackageScanner.Cli/         # CLI frontend (System.CommandLine + Spectre.Console)
   UnityPackageScanner.UI/          # Avalonia 11 GUI frontend
 tests/
@@ -21,24 +22,41 @@ docs/
 
 **Structural rule:** `Cli` and `UI` are siblings. Neither references the other. Anything both frontends need goes in `Core`. This is the guarantee that the engine stays UI-agnostic.
 
+## Sandbox architecture
+
+Rules that call AsmResolver (managed DLL analysis) run in an isolated child process (`ups-dll-worker`) via `SandboxedDllAnalyzer`. A crash or exploit in AsmResolver is contained to the worker.
+
+**Protocol:** newline-delimited JSON over stdin/stdout. `SandboxedDllAnalyzer` sends one `WorkerRequest` per DLL entry; the worker sends back one `WorkerResponse` per request. stderr from the worker is logged as warnings.
+
+**Routing in `ScanPipeline`:**
+- `SandboxedTypes` — the set of `DetectedType` values whose entries go to the sandbox (ManagedDll, NativePE, NativeElf, NativeMachO).
+- `AsmResolverRuleIds` — the set of rule IDs that must *not* receive DLL/native entries in-process when the sandbox is active. Update this set when adding a new AsmResolver rule.
+
+**Worker registration:** AsmResolver rules are instantiated directly in `src/UnityPackageScanner.DllWorker/Program.cs`. When adding an AsmResolver rule, add it in both `Program.cs` (worker) and `AsmResolverRuleIds` (pipeline routing).
+
+**Critical encoding rule:** Always use `new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)` for pipe I/O (`ProcessStartInfo` encoding properties, `Console.InputEncoding`/`OutputEncoding` in the worker). `Encoding.UTF8` emits a UTF-8 BOM preamble that causes the JSON deserializer on the other end to fail silently.
+
+**Worker publish:** The CLI and UI `.csproj` files have `PublishDllWorker` / `CopyDllWorkerPublished` MSBuild targets that automatically build and copy the worker when publishing with a RID. Dev builds rely on `FindWorker()` finding `ups-dll-worker.dll` alongside the host and invoking it via `dotnet "ups-dll-worker.dll"`.
+
 ## Adding a detection rule
 
 1. Create `src/UnityPackageScanner.Rules/YourRule.cs`.
 2. Implement `IDetectionRule` from `UnityPackageScanner.Core.Analysis`.
 3. Add a `RuleId` constant to `KnownRuleIds.cs`.
 4. Wire the rule into `ServiceLocator.cs` (UI) and `Program.cs` (CLI).
-5. Write at least one positive test and one negative test using `UnityPackageBuilder` from `tests/UnityPackageScanner.Tests/Fixtures/`.
-6. Fill in `LongDescription` and `FalsePositivePatterns` — these appear in `docs/rules.md`.
-7. Run `dotnet run --project tools/RulesDocGenerator` to regenerate `docs/rules.md`.
+5. **If the rule calls AsmResolver:** also add it to `DllWorker/Program.cs` and to `ScanPipeline.AsmResolverRuleIds`.
+6. Write at least one positive test and one negative test using `UnityPackageBuilder` from `tests/UnityPackageScanner.Tests/Fixtures/`.
+7. Fill in `LongDescription` and `FalsePositivePatterns` — these appear in `docs/rules.md`.
+8. Run `dotnet run --project tools/RulesDocGenerator` to regenerate `docs/rules.md`.
 
 A rule without positive AND negative tests is not done. A rule without documentation is not done.
 
 ## Testing
 
 ```bash
-dotnet test                         # Run all tests
-dotnet test --filter "ClassName=InitializeOnLoadRuleTests"   # Run one class
-dotnet test --collect:"XPlat Code Coverage"                  # With coverage
+dotnet test                                      # Run all tests
+dotnet test --filter "AlphaHijackFolder"         # Run tests whose name contains a substring
+dotnet test --collect:"XPlat Code Coverage"      # With coverage
 ```
 
 Coverage gate: ≥85% overall line coverage across all assemblies (Core, Rules, CLI). Enforced in CI via ReportGenerator + `coverlet.runsettings`. Excluded from measurement: `Program.cs` (top-level statements, no class to decorate) and `SpectreConsoleSink` (wraps live stderr — not unit-testable). Do not add new untested code to other classes without corresponding tests.
