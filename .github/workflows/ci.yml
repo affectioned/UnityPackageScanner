@@ -121,7 +121,9 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - run: dotnet restore
+      # Restore with the target RID so packages are cached before the nested
+      # dotnet publish calls inside PublishDllWorker (csproj Exec target) run.
+      - run: dotnet restore --runtime ${{ matrix.rid }}
 
       - name: Publish GUI
         run: |
@@ -132,6 +134,7 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:Version=${{ steps.version.outputs.version }} \
+            --no-restore \
             --output ./publish/gui/${{ matrix.rid }}
 
       - name: Publish CLI
@@ -143,35 +146,22 @@ jobs:
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:Version=${{ steps.version.outputs.version }} \
+            --no-restore \
             --output ./publish/cli/${{ matrix.rid }}
 
-      - name: Package GUI (zip — Windows)
-        if: matrix.rid == 'win-x64'
-        shell: pwsh
+      - name: Package
         run: |
-          Copy-Item README.md, LICENSE -Destination ./publish/gui/${{ matrix.rid }}/
-          Compress-Archive -Path ./publish/gui/${{ matrix.rid }}/* -DestinationPath "UnityPackageScanner-${{ steps.version.outputs.version }}-${{ matrix.rid }}.zip"
-
-      - name: Package GUI (tar.gz — Linux/macOS)
-        if: matrix.rid != 'win-x64'
-        run: |
-          cp README.md LICENSE ./publish/gui/${{ matrix.rid }}/
-          tar -czf "UnityPackageScanner-${{ steps.version.outputs.version }}-${{ matrix.rid }}.tar.gz" \
-            -C ./publish/gui/${{ matrix.rid }} .
-
-      - name: Package CLI (zip — Windows)
-        if: matrix.rid == 'win-x64'
-        shell: pwsh
-        run: |
-          Copy-Item README.md, LICENSE -Destination ./publish/cli/${{ matrix.rid }}/
-          Compress-Archive -Path ./publish/cli/${{ matrix.rid }}/* -DestinationPath "unity-package-scanner-cli-${{ steps.version.outputs.version }}-${{ matrix.rid }}.zip"
-
-      - name: Package CLI (tar.gz — Linux/macOS)
-        if: matrix.rid != 'win-x64'
-        run: |
-          cp README.md LICENSE ./publish/cli/${{ matrix.rid }}/
-          tar -czf "unity-package-scanner-cli-${{ steps.version.outputs.version }}-${{ matrix.rid }}.tar.gz" \
-            -C ./publish/cli/${{ matrix.rid }} .
+          TAG=${{ steps.version.outputs.version }}
+          RID=${{ matrix.rid }}
+          cp README.md LICENSE ./publish/gui/$RID/
+          cp README.md LICENSE ./publish/cli/$RID/
+          if [ "$RID" = "win-x64" ]; then
+            cd ./publish/gui/$RID && zip -r "../../../UnityPackageScanner-${TAG}-${RID}.zip" . && cd -
+            cd ./publish/cli/$RID && zip -r "../../../unity-package-scanner-cli-${TAG}-${RID}.zip" . && cd -
+          else
+            tar -czf "UnityPackageScanner-${TAG}-${RID}.tar.gz" -C ./publish/gui/$RID .
+            tar -czf "unity-package-scanner-cli-${TAG}-${RID}.tar.gz" -C ./publish/cli/$RID .
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
