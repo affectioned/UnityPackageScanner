@@ -141,10 +141,41 @@ public sealed class PathAnomalyRuleTests
     }
 
     [Fact]
+    public async Task Fires_on_trailing_dotdot_without_slash()
+    {
+        // Previously a false negative: "Assets/Plugins/.." ends with ".." but has no trailing "/"
+        var entries = await BuildAndExtract("Assets/Plugins/..");
+        var findings = await CollectFindings(entries);
+
+        findings.Should().ContainSingle()
+            .Which.Severity.Should().Be(Severity.Critical);
+    }
+
+    [Fact]
+    public async Task Fires_on_bare_dotdot()
+    {
+        var entries = await BuildAndExtract("..");
+        var findings = await CollectFindings(entries);
+
+        findings.Should().ContainSingle()
+            .Which.Severity.Should().Be(Severity.Critical);
+    }
+
+    [Fact]
     public async Task Does_not_fire_on_asset_path_containing_dots()
     {
-        // "Assets/v1.2.3/readme.txt" contains dots but not "../"
+        // "Assets/v1.2.3/readme.txt" contains dots but no ".." segment
         var entries = await BuildAndExtract("Assets/v1.2.3/readme.txt");
+        var findings = await CollectFindings(entries);
+
+        findings.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Does_not_fire_on_path_with_dotdot_as_prefix_of_segment()
+    {
+        // "..foo" is not a traversal segment — only an exact ".." match should fire
+        var entries = await BuildAndExtract("Assets/..foo/bar.cs");
         var findings = await CollectFindings(entries);
 
         findings.Should().BeEmpty();

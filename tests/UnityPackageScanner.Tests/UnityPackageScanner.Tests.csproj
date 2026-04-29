@@ -8,7 +8,30 @@
     <ProjectReference Include="..\..\src\UnityPackageScanner.Cli\UnityPackageScanner.Cli.csproj" />
     <ProjectReference Include="..\..\src\UnityPackageScanner.Core\UnityPackageScanner.Core.csproj" />
     <ProjectReference Include="..\..\src\UnityPackageScanner.Rules\UnityPackageScanner.Rules.csproj" />
+    <!-- Build worker and copy it so integration tests can spawn it. -->
+    <ProjectReference Include="..\..\src\UnityPackageScanner.DllWorker\UnityPackageScanner.DllWorker.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
+
+  <Target Name="CopyDllWorker" AfterTargets="Build">
+    <PropertyGroup>
+      <_WorkerOut>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../src/UnityPackageScanner.DllWorker/bin/$(Configuration)/net8.0/'))</_WorkerOut>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.exe"
+          DestinationFiles="$(OutputPath)ups-dll-worker.exe"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.exe')" />
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.dll"
+          DestinationFiles="$(OutputPath)ups-dll-worker.dll"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.dll')" />
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.runtimeconfig.json"
+          DestinationFiles="$(OutputPath)ups-dll-worker.runtimeconfig.json"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.runtimeconfig.json')" />
+  </Target>
   <ItemGroup>
     <PackageReference Include="AsmResolver.DotNet" Version="5.5.1" />
     <PackageReference Include="AsmResolver.PE" Version="5.5.1" />

@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using AsmResolver.DotNet;
 using Microsoft.Extensions.Logging;
 using UnityPackageScanner.Core.Analysis;

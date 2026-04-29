@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using AsmResolver.DotNet;
 using AsmResolver.PE.DotNet.Cil;
 using Microsoft.Extensions.Logging;

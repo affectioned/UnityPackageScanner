@@ -13,6 +13,51 @@
     <ProjectReference Include="..\UnityPackageScanner.Core\UnityPackageScanner.Core.csproj" />
     <ProjectReference Include="..\UnityPackageScanner.Rules\UnityPackageScanner.Rules.csproj" />
   </ItemGroup>
+
+  <!-- See CLI comment: explicit MSBuild task to avoid NETSDK1150. -->
+  <Target Name="BuildDllWorker" BeforeTargets="Build">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)" />
+  </Target>
+
+  <Target Name="CopyDllWorker" AfterTargets="Build">
+    <PropertyGroup>
+      <_WorkerOut>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/bin/$(Configuration)/net8.0/'))</_WorkerOut>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.exe"
+          DestinationFiles="$(OutputPath)ups-dll-worker.exe"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.exe')" />
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.dll"
+          DestinationFiles="$(OutputPath)ups-dll-worker.dll"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.dll')" />
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.runtimeconfig.json"
+          DestinationFiles="$(OutputPath)ups-dll-worker.runtimeconfig.json"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.runtimeconfig.json')" />
+  </Target>
+
+  <Target Name="PublishDllWorker" BeforeTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishDir=$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))" />
+  </Target>
+
+  <Target Name="CopyDllWorkerPublished" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">
+    <PropertyGroup>
+      <_WorkerPub>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))</_WorkerPub>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_WorkerPub)ups-dll-worker.exe"
+          DestinationFiles="$(PublishDir)ups-dll-worker.exe"
+          Condition="Exists('$(_WorkerPub)ups-dll-worker.exe')" />
+    <Copy SourceFiles="$(_WorkerPub)ups-dll-worker"
+          DestinationFiles="$(PublishDir)ups-dll-worker"
+          Condition="Exists('$(_WorkerPub)ups-dll-worker')" />
+    <Exec Command="chmod +x '$(PublishDir)ups-dll-worker'"
+          Condition="!$([MSBuild]::IsOSPlatform('Windows')) AND Exists('$(PublishDir)ups-dll-worker')" />
+  </Target>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.0" />
     <PackageReference Include="Avalonia.Desktop" Version="11.2.0" />

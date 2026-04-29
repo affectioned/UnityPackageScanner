@@ -19,8 +19,8 @@ public sealed class PathAnomalyRule(ILogger<PathAnomalyRule> logger) : IDetectio
 
     public string LongDescription =>
         "Detects file paths inside the package that could escape the Unity project directory " +
-        "or overwrite sensitive project configuration. Checks for directory traversal sequences " +
-        "(../), absolute Unix and Windows paths, null bytes, and entries targeting reserved " +
+        "or overwrite sensitive project configuration. Checks for directory traversal segments " +
+        "('..'), absolute Unix and Windows paths, null bytes, and entries targeting reserved " +
         "Unity directories (ProjectSettings/, Packages/).";
 
     public IReadOnlyList<string> FalsePositivePatterns =>
@@ -53,12 +53,12 @@ public sealed class PathAnomalyRule(ILogger<PathAnomalyRule> logger) : IDetectio
     {
         var path = entry.NormalizedPathname;
 
-        if (path.Contains("../"))
+        if (path.Split('/').Any(s => s == ".."))
         {
             logger.LogWarning("{RuleId}: path traversal in '{Path}'", RuleId, path);
             return MakeFinding(entry, Severity.Critical,
-                "Contains '../'",
-                "The path contains a directory traversal sequence that could write files outside the Unity project directory.");
+                "Contains '..' path segment",
+                "The path contains a directory traversal segment ('..') that could write files outside the Unity project directory.");
         }
 
         if (path.Contains('\0'))

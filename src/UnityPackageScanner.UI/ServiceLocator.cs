@@ -35,7 +35,8 @@ internal static class ServiceLocator
             new SuspiciousFileTypeRule(loggerFactory.CreateLogger<SuspiciousFileTypeRule>()),
         };
 
-        var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>());
+        var dllAnalyzer = new SandboxedDllAnalyzer(loggerFactory.CreateLogger<SandboxedDllAnalyzer>());
+        var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>(), dllAnalyzer);
 
         _mainViewModel = new MainViewModel(pipeline, loggerFactory.CreateLogger<MainViewModel>());
     }

@@ -13,6 +13,55 @@
     <ProjectReference Include="..\UnityPackageScanner.Core\UnityPackageScanner.Core.csproj" />
     <ProjectReference Include="..\UnityPackageScanner.Rules\UnityPackageScanner.Rules.csproj" />
   </ItemGroup>
+
+  <!-- Build the worker before this project, then copy its output alongside this exe.
+       Using an explicit MSBuild task instead of ProjectReference avoids NETSDK1150
+       (self-contained exe cannot ProjectReference a non-self-contained exe). -->
+  <Target Name="BuildDllWorker" BeforeTargets="Build">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)" />
+  </Target>
+
+  <Target Name="CopyDllWorker" AfterTargets="Build">
+    <PropertyGroup>
+      <_WorkerOut>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/bin/$(Configuration)/net8.0/'))</_WorkerOut>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.exe"
+          DestinationFiles="$(OutputPath)ups-dll-worker.exe"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.exe')" />
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.dll"
+          DestinationFiles="$(OutputPath)ups-dll-worker.dll"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.dll')" />
+    <Copy SourceFiles="$(_WorkerOut)ups-dll-worker.runtimeconfig.json"
+          DestinationFiles="$(OutputPath)ups-dll-worker.runtimeconfig.json"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_WorkerOut)ups-dll-worker.runtimeconfig.json')" />
+  </Target>
+
+  <!-- Publish the worker self-contained for the same RID so end-users don't need dotnet on PATH. -->
+  <Target Name="PublishDllWorker" BeforeTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishDir=$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))" />
+  </Target>
+
+  <Target Name="CopyDllWorkerPublished" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">
+    <PropertyGroup>
+      <_WorkerPub>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))</_WorkerPub>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_WorkerPub)ups-dll-worker.exe"
+          DestinationFiles="$(PublishDir)ups-dll-worker.exe"
+          Condition="Exists('$(_WorkerPub)ups-dll-worker.exe')" />
+    <Copy SourceFiles="$(_WorkerPub)ups-dll-worker"
+          DestinationFiles="$(PublishDir)ups-dll-worker"
+          Condition="Exists('$(_WorkerPub)ups-dll-worker')" />
+    <!-- MSBuild Copy strips Unix execute permissions; restore them. -->
+    <Exec Command="chmod +x '$(PublishDir)ups-dll-worker'"
+          Condition="!$([MSBuild]::IsOSPlatform('Windows')) AND Exists('$(PublishDir)ups-dll-worker')" />
+  </Target>
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="Spectre.Console" Version="0.49.1" />

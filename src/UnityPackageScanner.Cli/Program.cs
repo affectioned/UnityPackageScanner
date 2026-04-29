@@ -118,7 +118,8 @@ root.SetHandler(async (InvocationContext ctx) =>
     }
 
     var extractor = new UnityPackageExtractor(loggerFactory.CreateLogger<UnityPackageExtractor>());
-    var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>());
+    var dllAnalyzer = new SandboxedDllAnalyzer(loggerFactory.CreateLogger<SandboxedDllAnalyzer>());
+    var pipeline = new ScanPipeline(extractor, rules, loggerFactory.CreateLogger<ScanPipeline>(), dllAnalyzer);
 
     var ct = ctx.GetCancellationToken();
     int exitCode = 0;
