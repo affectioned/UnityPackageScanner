@@ -27,7 +27,7 @@ docs/
 2. Implement `IDetectionRule` from `UnityPackageScanner.Core.Analysis`.
 3. Add a `RuleId` constant to `KnownRuleIds.cs`.
 4. Wire the rule into `ServiceLocator.cs` (UI) and `Program.cs` (CLI).
-5. Write at least one positive test and one negative test using `UnityPackageBuilder` from `TestFixtures`.
+5. Write at least one positive test and one negative test using `UnityPackageBuilder` from `tests/UnityPackageScanner.Tests/Fixtures/`.
 6. Fill in `LongDescription` and `FalsePositivePatterns` — these appear in `docs/rules.md`.
 7. Run `dotnet run --project tools/RulesDocGenerator` to regenerate `docs/rules.md`.
 

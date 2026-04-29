@@ -159,7 +159,7 @@ unity-package-scanner suspicious.unitypackage --verbose 2>debug.log
 
 **My package triggered a false positive. How do I investigate?**
 
-Re-run with `--verbose` to see the full heuristic breakdown, then check the log file at `~/.config/UnityPackageScanner/logs/` (Linux/macOS) or `%APPDATA%\UnityPackageScanner\logs\` (Windows).
+Re-run with `--verbose` to see the full heuristic breakdown, then check the log file in the `logs/` directory next to the executable.
 
 When opening a bug report, attach the log file (not the package, unless you are certain it contains no private work). Include the SHA-256 hash shown in the output so the package can be identified without needing the binary.
 
