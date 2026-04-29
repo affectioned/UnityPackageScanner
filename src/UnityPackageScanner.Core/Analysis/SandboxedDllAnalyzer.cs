@@ -153,13 +153,15 @@ public sealed class SandboxedDllAnalyzer
 
         var dir = AppContext.BaseDirectory;
 
-        // Self-contained publish: standalone native executable
-        var exe = Path.Combine(dir, OperatingSystem.IsWindows() ? "ups-dll-worker.exe" : "ups-dll-worker");
-        if (File.Exists(exe)) return (exe, "");
-
-        // Framework-dependent: run via dotnet
+        // Framework-dependent build (dll present alongside the apphost): use 'dotnet' directly.
+        // The apphost would otherwise search for the runtime in the app directory, which fails
+        // when the host app is itself self-contained and the runtime layout doesn't match.
         var dll = Path.Combine(dir, "ups-dll-worker.dll");
         if (File.Exists(dll)) return ("dotnet", $"\"{dll}\"");
+
+        // Self-contained publish: single-file native executable with no dll beside it.
+        var exe = Path.Combine(dir, OperatingSystem.IsWindows() ? "ups-dll-worker.exe" : "ups-dll-worker");
+        if (File.Exists(exe)) return (exe, "");
 
         throw new FileNotFoundException(
             $"ups-dll-worker not found in '{dir}'. Ensure it is built or published alongside the scanner.",

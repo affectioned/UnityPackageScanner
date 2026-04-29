@@ -33,6 +33,8 @@ internal static class ServiceLocator
             new EmbeddedEncryptedResourceRule(loggerFactory.CreateLogger<EmbeddedEncryptedResourceRule>()),
             new HiddenFolderRule(loggerFactory.CreateLogger<HiddenFolderRule>()),
             new SuspiciousFileTypeRule(loggerFactory.CreateLogger<SuspiciousFileTypeRule>()),
+            new AlphaHijackFolderRule(loggerFactory.CreateLogger<AlphaHijackFolderRule>()),
+            new BinaryMasqueradeRule(loggerFactory.CreateLogger<BinaryMasqueradeRule>()),
         };
 
         var dllAnalyzer = new SandboxedDllAnalyzer(loggerFactory.CreateLogger<SandboxedDllAnalyzer>());

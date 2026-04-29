@@ -16,5 +16,7 @@ public static class KnownRuleIds
     public const string SuspiciousFileType = "UPS012";
     public const string GuidCollision = "UPS013";
     public const string PlatformConfigAccess = "UPS014";
+    public const string AlphaHijackFolder = "UPS015";
+    public const string BinaryMasquerade = "UPS016";
     public const string PackageInfo = "UPS100";
 }

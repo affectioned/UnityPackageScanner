@@ -90,6 +90,8 @@ root.SetHandler(async (InvocationContext ctx) =>
         new EmbeddedEncryptedResourceRule(loggerFactory.CreateLogger<EmbeddedEncryptedResourceRule>()),
         new HiddenFolderRule(loggerFactory.CreateLogger<HiddenFolderRule>()),
         new SuspiciousFileTypeRule(loggerFactory.CreateLogger<SuspiciousFileTypeRule>()),
+        new AlphaHijackFolderRule(loggerFactory.CreateLogger<AlphaHijackFolderRule>()),
+        new BinaryMasqueradeRule(loggerFactory.CreateLogger<BinaryMasqueradeRule>()),
     };
 
     if (listRules)

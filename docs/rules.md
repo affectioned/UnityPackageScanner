@@ -31,7 +31,7 @@ Detects native (unmanaged) binaries: PE files without a CLR header, ELF binaries
 
 **Severity:** Critical
 
-Detects file paths inside the package that could escape the Unity project directory or overwrite sensitive project configuration. Checks for directory traversal sequences (../), absolute Unix and Windows paths, null bytes, and entries targeting reserved Unity directories (ProjectSettings/, Packages/).
+Detects file paths inside the package that could escape the Unity project directory or overwrite sensitive project configuration. Checks for directory traversal segments ('..'), absolute Unix and Windows paths, null bytes, and entries targeting reserved Unity directories (ProjectSettings/, Packages/).
 
 **Common false positives:**
 
@@ -127,4 +127,25 @@ Detects package entries whose path contains a directory component that begins wi
 
 - .DS_Store files are macOS metadata accidentally bundled by the package author. They are harmless but indicate the author did not clean up before packaging.
 - Some package managers or asset pipeline tools create dot-prefixed working directories; verify the publisher intent before concluding the path is intentionally hidden.
+
+### Executable in priority-ordered folder (`UPS015`)
+
+**Severity:** Suspicious
+
+Detects DLLs and C# source files stored inside folders whose name starts with '!', '~', or '#'. These characters have ASCII values below uppercase 'A', so Unity's asset pipeline and editor startup process files in such folders before any alphabetically-normal folder. Malicious packages exploit this ordering to ensure their editor scripts run — and can establish persistence or exfiltrate data — before the developer has a chance to read the other files in the package. The most widely-distributed variant uses a '!' prefix (e.g. Assets/!Author/Editor/payload.dll).
+
+**Common false positives:**
+
+- Some legitimate packages use a '!' prefix purely to group their assets at the top of the Project window for visibility (e.g. '!MyTool/'). If the DLL inside performs only standard editor tooling (setup wizards, importer helpers) with no network access or reflection, the '!' naming alone is not sufficient evidence of malice.
+
+### Binary data in text-format file (`UPS016`)
+
+**Severity:** Suspicious
+
+Detects package entries whose file extension declares a text format (.json, .xml, .txt, .csv, .yaml, .yml) but whose content is not valid UTF-8. All of these formats require UTF-8 encoding by their respective specifications. A file that fails UTF-8 validation is binary data in disguise — most commonly an encrypted payload, a C2 configuration blob, or key material stored alongside the package's runtime code.
+
+**Common false positives:**
+
+- Legacy text files encoded in ISO-8859-1 (Latin-1) or Windows-1252 contain byte sequences that are invalid UTF-8. These are uncommon in Unity packages but can occur in third-party assets originally authored on older Windows tools. Inspect the file — if it looks like readable text in a Western European language, it is likely a benign encoding issue.
+- Some Unity YAML binary-format serialized files (.asset, .prefab) may be stored with unusual extensions by mistake. Check whether the content begins with the YAML header '%YAML 1.1'.
 
