@@ -156,11 +156,12 @@ jobs:
           cp README.md LICENSE ./publish/gui/$RID/
           cp README.md LICENSE ./publish/cli/$RID/
           if [ "$RID" = "win-x64" ]; then
-            cd ./publish/gui/$RID && zip -r "../../../UnityPackageScanner-${TAG}-${RID}.zip" . && cd -
-            cd ./publish/cli/$RID && zip -r "../../../unity-package-scanner-cli-${TAG}-${RID}.zip" . && cd -
+            # zip is not available in Git Bash on Windows runners; 7z always is.
+            7z a -tzip "UnityPackageScanner-${TAG}-${RID}.zip" "./publish/gui/$RID/*"
+            7z a -tzip "unity-package-scanner-cli-${TAG}-${RID}.zip" "./publish/cli/$RID/*"
           else
-            tar -czf "UnityPackageScanner-${TAG}-${RID}.tar.gz" -C ./publish/gui/$RID .
-            tar -czf "unity-package-scanner-cli-${TAG}-${RID}.tar.gz" -C ./publish/cli/$RID .
+            tar -czf "UnityPackageScanner-${TAG}-${RID}.tar.gz" -C "./publish/gui/$RID" .
+            tar -czf "unity-package-scanner-cli-${TAG}-${RID}.tar.gz" -C "./publish/cli/$RID" .
           fi
 
       - uses: actions/upload-artifact@v4
