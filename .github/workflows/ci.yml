@@ -165,6 +165,52 @@ jobs:
             tar -czf "unity-package-scanner-cli-${TAG}-${RID}.tar.gz" -C "./publish/cli/$RID" .
           fi
 
+      - name: Smoke test — archives
+        run: |
+          RID=${{ matrix.rid }}
+          TAG=${{ steps.version.outputs.version }}
+
+          if [ "$RID" = "win-x64" ]; then
+            WORKER_NAME="ups-dll-worker.exe"
+          else
+            WORKER_NAME="ups-dll-worker"
+          fi
+
+          # --- GUI: verify files land at archive root (not nested under publish/gui/<rid>/) ---
+          GUI_DIR=$(mktemp -d)
+          if [ "$RID" = "win-x64" ]; then
+            7z x "UnityPackageScanner-${TAG}-${RID}.zip" -o"$GUI_DIR"
+            GUI_EXE="$GUI_DIR/UnityPackageScanner.exe"
+          else
+            tar -xzf "UnityPackageScanner-${TAG}-${RID}.tar.gz" -C "$GUI_DIR"
+            GUI_EXE="$GUI_DIR/UnityPackageScanner"
+          fi
+          echo "=== GUI archive ==="
+          ls -la "$GUI_DIR"
+          [ -f "$GUI_EXE" ]              || { echo "::error::GUI exe not at archive root — packaging bug"; exit 1; }
+          [ -f "$GUI_DIR/$WORKER_NAME" ] || { echo "::error::ups-dll-worker missing from GUI archive"; exit 1; }
+
+          # --- CLI: verify structure, then run --help ---
+          CLI_DIR=$(mktemp -d)
+          if [ "$RID" = "win-x64" ]; then
+            7z x "unity-package-scanner-cli-${TAG}-${RID}.zip" -o"$CLI_DIR"
+            CLI="$CLI_DIR/unity-package-scanner.exe"
+          else
+            tar -xzf "unity-package-scanner-cli-${TAG}-${RID}.tar.gz" -C "$CLI_DIR"
+            CLI="$CLI_DIR/unity-package-scanner"
+            chmod +x "$CLI" "$CLI_DIR/$WORKER_NAME" 2>/dev/null || true
+          fi
+          echo "=== CLI archive ==="
+          ls -la "$CLI_DIR"
+          [ -f "$CLI" ]                  || { echo "::error::CLI not at archive root — packaging bug"; exit 1; }
+          [ -f "$CLI_DIR/$WORKER_NAME" ] || { echo "::error::ups-dll-worker missing from CLI archive"; exit 1; }
+          "$CLI" --help
+
+          # A missing log file is the canary for a silent startup crash (e.g. Serilog init failure).
+          ls "$CLI_DIR/logs/"*.log 2>/dev/null \
+            && echo "Log file present — startup OK" \
+            || echo "::warning::No log file after --help; check whether CLI initialises Serilog before command dispatch"
+
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.rid }}
