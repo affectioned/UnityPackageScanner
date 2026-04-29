@@ -145,6 +145,36 @@ public sealed class ObfuscatedDllRuleTests
         findings.Single().Evidence.Should().Contain("Obfuscation");
     }
 
+    [Fact]
+    public async Task Fires_on_dll_with_high_entropy_string_literals()
+    {
+        // 6 all-unique-character strings → suspicious * 8 = 48, above the 40-point threshold.
+        var entries = await BuildAndExtract("Assets/Plugins/obf.dll", ManagedDllBuilder.WithObfuscatedStringLiterals(6));
+        var findings = await CollectFindings(entries);
+
+        findings.Should().ContainSingle()
+            .Which.RuleId.Should().Be(KnownRuleIds.ObfuscatedDll);
+    }
+
+    [Fact]
+    public async Task Evidence_mentions_obfuscated_strings()
+    {
+        var entries = await BuildAndExtract("Assets/Plugins/obf.dll", ManagedDllBuilder.WithObfuscatedStringLiterals(6));
+        var findings = await CollectFindings(entries);
+
+        findings.Single().Evidence.Should().ContainEquivalentOf("string literal");
+    }
+
+    [Fact]
+    public async Task Does_not_fire_on_dll_with_normal_string_literals()
+    {
+        // Readable identifiers have entropy ≈ 3.5 bits/char — well below the 4.5 threshold.
+        var entries = await BuildAndExtract("Assets/Plugins/clean.dll", ManagedDllBuilder.WithNormalStringLiterals());
+        var findings = await CollectFindings(entries);
+
+        findings.Should().BeEmpty("normal readable strings do not trigger the entropy signal");
+    }
+
     // --- Helpers ---
 
     private async Task<IReadOnlyList<PackageEntry>> BuildAndExtract(string pathname, byte[] bytes)

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using AsmResolver.DotNet;
+using AsmResolver.PE.DotNet.Cil;
 using Microsoft.Extensions.Logging;
 using UnityPackageScanner.Core.Analysis;
 using UnityPackageScanner.Core.Models;
@@ -15,8 +16,9 @@ public sealed class ObfuscatedDllRule(ILogger<ObfuscatedDllRule> logger) : IDete
 
     public string LongDescription =>
         "Detects managed assemblies whose metadata shows signs of obfuscation: control characters " +
-        "in type or method names, a high ratio of single-character identifiers, or known obfuscator " +
-        "marker attributes such as [Obfuscation] or [ConfusedBy]. " +
+        "in type or method names, a high ratio of single-character identifiers, known obfuscator " +
+        "marker attributes such as [Obfuscation] or [ConfusedBy], or string literals whose " +
+        "character-distribution entropy indicates encrypted or randomly-generated content. " +
         "Obfuscation alone is not malicious — commercial packages sometimes protect their IP — " +
         "but obfuscated code from an unknown source is harder to audit and warrants extra scrutiny, " +
         "particularly when combined with network-access or process-spawn findings.";
@@ -139,8 +141,96 @@ public sealed class ObfuscatedDllRule(ILogger<ObfuscatedDllRule> logger) : IDete
             }
         }
 
+        CheckObfuscatedStringLiterals(module, pathname, signals, ref score);
+
         return (score, signals);
     }
+
+    private void CheckObfuscatedStringLiterals(
+        ModuleDefinition module, string pathname,
+        List<string> signals, ref int score)
+    {
+        int suspicious = 0;
+        int total = 0;
+
+        foreach (var type in module.GetAllTypes())
+        {
+            foreach (var method in type.Methods)
+            {
+                if (method.CilMethodBody is null) continue;
+
+                foreach (var instr in method.CilMethodBody.Instructions)
+                {
+                    if (instr.OpCode != CilOpCodes.Ldstr) continue;
+                    if (instr.Operand is not string s) continue;
+                    if (s.Length < 6) continue;
+
+                    total++;
+                    if (IsObfuscatedLiteral(s))
+                        suspicious++;
+                }
+            }
+        }
+
+        if (suspicious < 3) return;
+
+        logger.LogDebug("{RuleId}: {Suspicious}/{Total} suspicious string literals in {Path}",
+            RuleId, suspicious, total, pathname);
+
+        // Score scales with count: 5 strings alone crosses the 40-point threshold.
+        score += Math.Min(suspicious * 8, 50);
+        signals.Add($"{suspicious} string literal(s) with high-entropy or non-printable character content");
+    }
+
+    private static bool IsObfuscatedLiteral(string s)
+    {
+        // Non-printable control characters (excluding tab / LF / CR) are a strong signal —
+        // obfuscators store encrypted bytes directly in string operands.
+        int controlCount = 0;
+        foreach (char c in s)
+            if (c < 0x20 && c is not '\t' and not '\n' and not '\r') controlCount++;
+        if ((double)controlCount / s.Length > 0.15)
+            return true;
+
+        // For printable strings, skip obvious false-positive categories before running entropy.
+        if (s.Length < 16) return false;
+        if (s.Contains("://", StringComparison.Ordinal)) return false; // URL
+        if (s.Contains('\\') || s.Contains('/')) return false;         // path
+        if (s.Contains(' ')) return false;                              // human-readable text
+        if (IsAllHex(s)) return false;                                  // SHA/MD5 hash
+        if (IsGuidLike(s)) return false;
+
+        return ComputeCharEntropy(s) > 4.5;
+    }
+
+    // Shannon entropy over the character distribution of a string (bits per character).
+    // English code identifiers typically score 3.5–4.0; truly random strings score 4.5+.
+    private static double ComputeCharEntropy(string s)
+    {
+        var freq = new Dictionary<char, int>(s.Length);
+        foreach (char c in s)
+            freq[c] = freq.GetValueOrDefault(c) + 1;
+
+        double entropy = 0;
+        double len = s.Length;
+        foreach (var count in freq.Values)
+        {
+            double p = count / len;
+            entropy -= p * Math.Log2(p);
+        }
+        return entropy;
+    }
+
+    private static bool IsAllHex(string s)
+    {
+        foreach (char c in s)
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+                return false;
+        return s.Length > 0;
+    }
+
+    private static bool IsGuidLike(string s) =>
+        s.Length == 36 && s[8] == '-' && s[13] == '-' && s[18] == '-' && s[23] == '-';
 
     private static void CheckObfuscatorAttributes(
         IList<CustomAttribute> attrs, List<string> signals, ref int score)

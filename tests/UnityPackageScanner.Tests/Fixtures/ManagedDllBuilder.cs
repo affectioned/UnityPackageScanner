@@ -203,6 +203,74 @@ public static class ManagedDllBuilder
         });
 
     /// <summary>
+    /// Creates a managed DLL whose method body contains <paramref name="count"/> string literals
+    /// with Shannon entropy &gt; 4.5 bits/char (all-unique-character sequences of length 26).
+    /// Should trigger <c>ObfuscatedDllRule</c>'s string-literal entropy signal when count ≥ 5.
+    /// </summary>
+    public static byte[] WithObfuscatedStringLiterals(int count = 6, string moduleName = "TestObfStrings.dll") =>
+        Build(moduleName, (module, type) =>
+        {
+            // 26-character strings with all unique characters; entropy = log2(26) ≈ 4.7 bits/char > 4.5 threshold.
+            // No spaces, URLs, path separators, or GUID/hex patterns — false-positive filters pass through.
+            string[] highEntropyStrings =
+            [
+                "abcdefghijklmnopqrstuvwxyz",
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                "ZYXWVUTSRQPONMLKJIHGFEDCba",
+                "zyxwvutsrqponmlkjihgfedcBA",
+                "AaBbCcDdEeFfGgHhIiJjKkLlMm",
+                "NnOoPpQqRrSsTtUuVvWwXxYyZz",
+                "mNlOkPjQiRhSgTfUeVdWcXbYaZ",
+                "ZaYbXcWdVeUfTgShRiQjPkOlNm",
+            ];
+
+            var method = new MethodDefinition("ObfuscatedMethod",
+                MethodAttributes.Public | MethodAttributes.Static,
+                MethodSignature.CreateStatic(module.CorLibTypeFactory.Void));
+            method.CilMethodBody = new CilMethodBody(method);
+
+            foreach (var s in highEntropyStrings.Take(count))
+            {
+                method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Ldstr, s));
+                method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Pop));
+            }
+            method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Ret));
+            type.Methods.Add(method);
+        });
+
+    /// <summary>
+    /// Creates a managed DLL whose method body contains normal readable string literals.
+    /// Entropy of each string is well below the 4.5 bit/char threshold.
+    /// Should NOT trigger <c>ObfuscatedDllRule</c>'s string-literal entropy signal.
+    /// </summary>
+    public static byte[] WithNormalStringLiterals(string moduleName = "TestNormalStrings.dll") =>
+        Build(moduleName, (module, type) =>
+        {
+            // Readable identifiers — length ≥ 16 but with many repeated chars, entropy ≈ 3.5 bits/char.
+            string[] normalStrings =
+            [
+                "GetCurrentUnityVersion",
+                "InitializeEditorWindow",
+                "BuildPlayerForWindows64",
+                "AssetDatabaseUtilHelper",
+                "SceneManagementUtility2",
+            ];
+
+            var method = new MethodDefinition("NormalMethod",
+                MethodAttributes.Public | MethodAttributes.Static,
+                MethodSignature.CreateStatic(module.CorLibTypeFactory.Void));
+            method.CilMethodBody = new CilMethodBody(method);
+
+            foreach (var s in normalStrings)
+            {
+                method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Ldstr, s));
+                method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Pop));
+            }
+            method.CilMethodBody.Instructions.Add(new CilInstruction(CilOpCodes.Ret));
+            type.Methods.Add(method);
+        });
+
+    /// <summary>
     /// Creates a managed DLL with a small, low-entropy embedded resource (repeating bytes).
     /// Should NOT trigger EmbeddedEncryptedResourceRule.
     /// </summary>
