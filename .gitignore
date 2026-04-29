@@ -213,3 +213,4 @@ FakesAssemblies/
 # Vim swap files
 *.swp
 *.swo
+*.unitypackage
