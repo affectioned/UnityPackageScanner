@@ -14,11 +14,10 @@
     <ProjectReference Include="..\UnityPackageScanner.Rules\UnityPackageScanner.Rules.csproj" />
   </ItemGroup>
 
-  <!-- See CLI comment: explicit MSBuild task to avoid NETSDK1150. -->
+  <!-- Uses dotnet build via Exec to keep DllWorker out of this project's MSBuild graph.
+       See CLI csproj for the explanation. -->
   <Target Name="BuildDllWorker" BeforeTargets="Build">
-    <MSBuild Projects="$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj"
-             Targets="Build"
-             Properties="Configuration=$(Configuration)" />
+    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj&quot; -c $(Configuration)" />
   </Target>
 
   <Target Name="CopyDllWorker" AfterTargets="Build">
@@ -39,10 +38,15 @@
           Condition="Exists('$(_WorkerOut)ups-dll-worker.runtimeconfig.json')" />
   </Target>
 
+  <!-- Publish the worker self-contained for the same RID so end-users don't need dotnet on PATH.
+       Uses dotnet publish via Exec (not the MSBuild task) so that restore runs automatically
+       before publish — nested MSBuild tasks do not re-evaluate project state after restore. -->
   <Target Name="PublishDllWorker" BeforeTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">
-    <MSBuild Projects="$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj"
-             Targets="Publish"
-             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;PublishSingleFile=true;PublishDir=$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))" />
+    <PropertyGroup>
+      <_WorkerPubDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))</_WorkerPubDir>
+      <_WorkerProj>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj'))</_WorkerProj>
+    </PropertyGroup>
+    <Exec Command="dotnet publish &quot;$(_WorkerProj)&quot; -c $(Configuration) -r $(RuntimeIdentifier) -p:SelfContained=true -p:PublishSingleFile=true -o &quot;$(_WorkerPubDir)&quot;" />
   </Target>
 
   <Target Name="CopyDllWorkerPublished" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">
