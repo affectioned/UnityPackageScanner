@@ -17,7 +17,7 @@
   <!-- Uses dotnet build via Exec to keep DllWorker out of this project's MSBuild graph.
        See CLI csproj for the explanation. -->
   <Target Name="BuildDllWorker" BeforeTargets="Build">
-    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj&quot; -c $(Configuration)" />
+    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj&quot; -c $(Configuration) -p:Version=$(Version)" />
   </Target>
 
   <Target Name="CopyDllWorker" AfterTargets="Build">
@@ -46,7 +46,7 @@
       <_WorkerPubDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))</_WorkerPubDir>
       <_WorkerProj>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj'))</_WorkerProj>
     </PropertyGroup>
-    <Exec Command="dotnet publish &quot;$(_WorkerProj)&quot; -c $(Configuration) -r $(RuntimeIdentifier) -p:SelfContained=true -p:PublishSingleFile=true -o &quot;$(_WorkerPubDir)&quot;" />
+    <Exec Command="dotnet publish &quot;$(_WorkerProj)&quot; -c $(Configuration) -r $(RuntimeIdentifier) -p:SelfContained=true -p:PublishSingleFile=true -p:Version=$(Version) -o &quot;$(_WorkerPubDir)&quot;" />
   </Target>
 
   <Target Name="CopyDllWorkerPublished" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">

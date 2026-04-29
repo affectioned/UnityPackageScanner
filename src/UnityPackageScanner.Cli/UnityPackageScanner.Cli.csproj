@@ -17,9 +17,13 @@
   <!-- Build the worker before this project, then copy its output alongside this exe.
        Uses dotnet build via Exec (not the MSBuild task) to keep the DllWorker completely
        out of this project's MSBuild graph — if added via MSBuild task, MSBuild also tries
-       to resolve the worker for the parent's RID during publish, causing NETSDK1047. -->
+       to resolve the worker for the parent's RID during publish, causing NETSDK1047.
+       -p:Version=$(Version) must be forwarded: DllWorker references Core+Rules, so its
+       build rebuilds those assemblies. Without the version flag the worker build produces
+       Core@0.1.0 while the parent exe was compiled against Core@<release>, causing a
+       FileNotFoundException at startup when the single-file bundle is loaded. -->
   <Target Name="BuildDllWorker" BeforeTargets="Build">
-    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj&quot; -c $(Configuration)" />
+    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj&quot; -c $(Configuration) -p:Version=$(Version)" />
   </Target>
 
   <Target Name="CopyDllWorker" AfterTargets="Build">
@@ -48,7 +52,7 @@
       <_WorkerPubDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/publish/$(Configuration)/$(RuntimeIdentifier)/'))</_WorkerPubDir>
       <_WorkerProj>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../UnityPackageScanner.DllWorker/UnityPackageScanner.DllWorker.csproj'))</_WorkerProj>
     </PropertyGroup>
-    <Exec Command="dotnet publish &quot;$(_WorkerProj)&quot; -c $(Configuration) -r $(RuntimeIdentifier) -p:SelfContained=true -p:PublishSingleFile=true -o &quot;$(_WorkerPubDir)&quot;" />
+    <Exec Command="dotnet publish &quot;$(_WorkerProj)&quot; -c $(Configuration) -r $(RuntimeIdentifier) -p:SelfContained=true -p:PublishSingleFile=true -p:Version=$(Version) -o &quot;$(_WorkerPubDir)&quot;" />
   </Target>
 
   <Target Name="CopyDllWorkerPublished" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != ''">

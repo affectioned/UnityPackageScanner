@@ -38,6 +38,8 @@ Rules that call AsmResolver (managed DLL analysis) run in an isolated child proc
 
 **Worker publish:** The CLI and UI `.csproj` files have `PublishDllWorker` / `CopyDllWorkerPublished` MSBuild targets that automatically build and copy the worker when publishing with a RID. Dev builds rely on `FindWorker()` finding `ups-dll-worker.dll` alongside the host and invoking it via `dotnet "ups-dll-worker.dll"`.
 
+**Version forwarding:** Both `BuildDllWorker` and `PublishDllWorker` Exec commands pass `-p:Version=$(Version)`. DllWorker depends on Core+Rules, so its Exec build rebuilds those assemblies. Without the version flag the worker's build produces Core at the default version (0.1.0) while the parent exe was compiled against Core at the release version, causing `FileNotFoundException` at startup when the single-file bundle loads the mismatched assembly.
+
 ## Adding a detection rule
 
 1. Create `src/UnityPackageScanner.Rules/YourRule.cs`.
